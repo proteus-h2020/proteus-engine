@@ -72,20 +72,23 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 			final Map<InputGate, GatesPriority> prio = Maps.newHashMapWithExpectedSize(inputGates.length);
 			Map<InputGate, Integer> inputMapping = Maps.newHashMapWithExpectedSize(inputGates.length);
 
-			for (i = 0; i < inputGates.length - numberOfSideInputs; i++) {
-				inputGates[i] = env.getInputGate(i);
-				inputMapping.put(inputGates[i], 0);
-				prio.put(inputGates[i], GatesPriority.NORMAL);
-			}
 
-			for (; i < numberOfInputs; i++) {
+			for (i = 0; i < inEdges.size(); i++) {
 				int inputType = inEdges.get(i).getTypeNumber();
-				InputGate reader = env.getInputGate(i);
-				SideInputInformation<?> info = sideInfos.get(inputType);
-				inputGates[i] = reader;
-				serializers[i] = info.getSerializer();
-				inputMapping.put(inputGates[i], inputType);
-				prio.put(inputGates[i], GatesPriority.HIGH);
+				if (inputType == 0) {
+					inputGates[inputType] = env.getInputGate(i);
+					inputMapping.put(inputGates[inputType], 0);
+					prio.put(inputGates[inputType], GatesPriority.NORMAL);
+					serializers[0] = configuration.getTypeSerializerIn1(userClassLoader);
+				} else {
+					InputGate reader = env.getInputGate(i);
+					SideInputInformation<?> info = sideInfos.get(inputType);
+					inputGates[inputType] = reader;
+					serializers[inputType] = info.getSerializer();
+					inputMapping.put(reader, inputType);
+					prio.put(reader, GatesPriority.HIGH);
+				}
+
 			}
 
 			wrappers[0] = new OperatorWrapper<IN>() {

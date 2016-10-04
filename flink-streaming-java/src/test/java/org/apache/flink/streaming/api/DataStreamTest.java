@@ -234,7 +234,8 @@ public class DataStreamTest {
 			.withSideInput(sideInput2)
 		;
 
-		env.execute();
+		env.execute("side inputs");
+
 
 	}
 	/**
