@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.graph;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.ExecutionConfig;
@@ -30,6 +31,7 @@ import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.api.transformations.util.SideInputInformation;
 import org.apache.flink.util.Preconditions;
 
 /**
@@ -70,6 +72,7 @@ public class StreamNode implements Serializable {
 	private InputFormat<?, ?> inputFormat;
 
 	private String transformationId;
+	private Map<Integer, SideInputInformation<?>> sideInputsTypeSerializers;
 
 	public StreamNode(StreamExecutionEnvironment env,
 		Integer id,
@@ -85,6 +88,7 @@ public class StreamNode implements Serializable {
 		this.outputSelectors = outputSelector;
 		this.jobVertexClass = jobVertexClass;
 		this.slotSharingGroup = slotSharingGroup;
+		this.sideInputsTypeSerializers = null;
 	}
 
 	public void addInEdge(StreamEdge inEdge) {
@@ -297,4 +301,13 @@ public class StreamNode implements Serializable {
 	public int hashCode() {
 		return id;
 	}
+
+	public void setSideInputsTypeSerializers(Map<Integer, SideInputInformation<?>> sideInputsTypeSerializers) {
+		this.sideInputsTypeSerializers = sideInputsTypeSerializers;
+	}
+
+	public Map<Integer, SideInputInformation<?>> getSideInputsTypeSerializers() {
+		return this.sideInputsTypeSerializers;
+	}
+
 }

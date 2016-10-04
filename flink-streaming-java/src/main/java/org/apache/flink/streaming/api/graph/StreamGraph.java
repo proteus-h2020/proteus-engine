@@ -50,10 +50,12 @@ import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.api.operators.StreamSource;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.runtime.state.AbstractStateBackend;
+import org.apache.flink.streaming.api.transformations.util.SideInputInformation;
 import org.apache.flink.streaming.runtime.partitioner.ConfigurableStreamPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
+import org.apache.flink.streaming.runtime.tasks.MultipleInputsStreamTask;
 import org.apache.flink.streaming.runtime.tasks.OneInputStreamTask;
 import org.apache.flink.streaming.runtime.tasks.SourceStreamTask;
 import org.apache.flink.streaming.runtime.tasks.StoppableSourceStreamTask;
@@ -188,10 +190,25 @@ public class StreamGraph extends StreamingPlan {
 			TypeInformation<OUT> outTypeInfo,
 			String operatorName) {
 
+		addOperator(vertexID, slotSharingGroup, operatorObject, inTypeInfo, outTypeInfo, operatorName, false);
+
+	}
+
+	public <IN, OUT> void addOperator(
+			Integer vertexID,
+			String slotSharingGroup,
+			StreamOperator<OUT> operatorObject,
+			TypeInformation<IN> inTypeInfo,
+			TypeInformation<OUT> outTypeInfo,
+			String operatorName,
+			boolean hasSideInput) {
+
 		if (operatorObject instanceof StoppableStreamSource) {
 			addNode(vertexID, slotSharingGroup, StoppableSourceStreamTask.class, operatorObject, operatorName);
 		} else if (operatorObject instanceof StreamSource) {
 			addNode(vertexID, slotSharingGroup, SourceStreamTask.class, operatorObject, operatorName);
+		} else if (hasSideInput) {
+			addNode(vertexID, slotSharingGroup, MultipleInputsStreamTask.class, operatorObject, operatorName);
 		} else {
 			addNode(vertexID, slotSharingGroup, OneInputStreamTask.class, operatorObject, operatorName);
 		}
@@ -629,6 +646,19 @@ public class StreamGraph extends StreamingPlan {
 			if (pw != null) {
 				pw.close();
 			}
+		}
+	}
+
+	public void setSideInputSerializers(int id, Map<Integer, SideInputInformation<?>> sideInputInfos) {
+		StreamNode vertex = getStreamNode(id);
+		if (vertex != null) {
+			for (SideInputInformation<?> info : sideInputInfos.values()) {
+				TypeInformation<?> type = info.getType();
+				if (type != null && !(type instanceof MissingTypeInfo)) {
+					info.setSerializer(type.createSerializer(executionConfig));
+				}
+			}
+			vertex.setSideInputsTypeSerializers(sideInputInfos);
 		}
 	}
 }

@@ -31,6 +31,7 @@ import org.apache.flink.api.common.functions.Partitioner;
 import org.apache.flink.api.common.functions.RichFilterFunction;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.common.io.OutputFormat;
 import org.apache.flink.api.common.typeinfo.BasicArrayTypeInfo;
 import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo;
@@ -337,6 +338,19 @@ public class DataStream<T> {
 				new CustomPartitionerWrapper<>(
 						clean(partitioner),
 						clean(keySelector)));
+	}
+
+
+	public <R> DataStream<T> withSideInput(SideInput<R> sideInput) {
+
+		if (sideInput instanceof BroadcastedSideInput) {
+			DataStream<R> oth = ((BroadcastedSideInput<R>) sideInput).stream();
+			transformation.registerSideInput(sideInput.id(), oth.broadcast().getTransformation());
+		} else {
+			throw new UnsupportedOperationException();
+		}
+
+		return this;
 	}
 
 	/**

@@ -193,4 +193,9 @@ public class DummyEnvironment implements Environment {
 		return null;
 	}
 
+	@Override
+	public int getInputGatesCount() {
+		return 0;
+	}
+
 }

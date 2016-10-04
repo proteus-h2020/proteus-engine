@@ -22,11 +22,13 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.MissingTypeInfo;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.util.Preconditions;
 
 import java.util.Collection;
+import java.util.UUID;
 
 /**
  * A {@code StreamTransformation} represents the operation that creates a
@@ -374,5 +376,10 @@ public abstract class StreamTransformation<T> {
 		result = 31 * result + parallelism;
 		result = 31 * result + (int) (bufferTimeout ^ (bufferTimeout >>> 32));
 		return result;
+	}
+
+
+	public <R> void registerSideInput(UUID id, StreamTransformation<R> transformation) {
+		throw new UnsupportedOperationException();
 	}
 }

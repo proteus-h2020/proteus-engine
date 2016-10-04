@@ -66,7 +66,7 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends StreamTask<OUT, TwoInputS
 			}
 		}
 	
-		this.inputProcessor = new StreamTwoInputProcessor<IN1, IN2>(inputList1, inputList2,
+		this.inputProcessor = new StreamTwoInputProcessor<>(inputList1, inputList2,
 				inputDeserializer1, inputDeserializer2,
 				this,
 				configuration.getCheckpointMode(),

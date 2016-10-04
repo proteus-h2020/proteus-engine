@@ -46,6 +46,7 @@ import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.api.transformations.StreamTransformation;
+import org.apache.flink.streaming.api.transformations.util.SideInputInformation;
 import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
@@ -358,6 +359,12 @@ public class StreamingJobGraphGenerator {
 		// only set the max parallelism if the vertex uses partitioned state (= KeyedStream).
 		if (vertex.getStatePartitioner1() != null) {
 			config.setNumberOfKeyGroups(vertex.getMaxParallelism());
+		}
+
+		Map<Integer, SideInputInformation<?>> infos = vertex.getSideInputsTypeSerializers();
+		if (infos != null) {
+			config.setNumberOfSideInputs(infos.size());
+			config.setSideInputsTypeSerializers(infos);
 		}
 
 		Class<? extends AbstractInvokable> vertexClass = vertex.getJobVertexClass();

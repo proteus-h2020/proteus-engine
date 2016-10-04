@@ -236,6 +236,11 @@ public class RuntimeEnvironment implements Environment {
 	}
 
 	@Override
+	public int getInputGatesCount() {
+		return inputGates.length;
+	}
+
+	@Override
 	public void acknowledgeCheckpoint(
 			long checkpointId,
 			long synchronousDurationMillis,

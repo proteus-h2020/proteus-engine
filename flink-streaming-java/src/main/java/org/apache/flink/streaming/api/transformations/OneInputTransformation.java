@@ -21,11 +21,17 @@ import com.google.common.collect.Lists;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * This Transformation represents the application of a
@@ -41,6 +47,8 @@ public class OneInputTransformation<IN, OUT> extends StreamTransformation<OUT> {
 	private final StreamTransformation<IN> input;
 
 	private final OneInputStreamOperator<IN, OUT> operator;
+
+	private final HashMap<UUID, StreamTransformation<?>> sideInputs;
 
 	private KeySelector<IN, ?> stateKeySelector;
 	
@@ -64,6 +72,7 @@ public class OneInputTransformation<IN, OUT> extends StreamTransformation<OUT> {
 		super(name, outputType, parallelism);
 		this.input = input;
 		this.operator = operator;
+		this.sideInputs = new HashMap<>();
 	}
 
 	/**
@@ -119,11 +128,35 @@ public class OneInputTransformation<IN, OUT> extends StreamTransformation<OUT> {
 		List<StreamTransformation<?>> result = Lists.newArrayList();
 		result.add(this);
 		result.addAll(input.getTransitivePredecessors());
+		for (StreamTransformation<?> transformation : sideInputs.values()) {
+			result.addAll(transformation.getTransitivePredecessors());
+		}
 		return result;
 	}
 
 	@Override
 	public final void setChainingStrategy(ChainingStrategy strategy) {
 		operator.setChainingStrategy(strategy);
+	}
+
+	// --------------------------------------------------------------------
+	// side inputs handling
+	// --------------------------------------------------------------------
+
+	@Override
+	public <R> void registerSideInput(UUID id, StreamTransformation<R> transformation) {
+		if (!sideInputs.containsKey(id)) {
+			sideInputs.put(id, transformation);
+		} else {
+			throw new RuntimeException("cannot add an already added side input");
+		}
+	}
+
+	public boolean hasSideInputs() {
+		return sideInputs.size() > 0;
+	}
+
+	public Map<UUID, StreamTransformation<?>> getSideInputs() {
+		return Collections.unmodifiableMap(sideInputs);
 	}
 }

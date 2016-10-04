@@ -25,10 +25,13 @@ import org.apache.flink.api.common.functions.FoldFunction;
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.Partitioner;
+import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.streaming.api.collector.selector.OutputSelector;
+import org.apache.flink.streaming.api.datastream.BroadcastedSideInput;
 import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
@@ -201,6 +204,39 @@ public class DataStreamTest {
 		}
 	}
 
+	@Test
+	public void testSideInputs() throws Exception {
+
+		// set up the execution environment
+		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(2);
+		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+		env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
+		//env.disableOperatorChaining();
+
+		DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
+		DataStream<Integer> sideSource1 = env.fromElements(1, 2, 3, 4, 5);
+		DataStream<String> sideSource2 = env.fromElements("A", "B", "C");
+
+		final SideInput<Integer> sideInput1 = new BroadcastedSideInput<>(sideSource1);
+		final SideInput<String> sideInput2 = new BroadcastedSideInput<>(sideSource2);
+
+		source1
+			.map(new RichMapFunction<String, String>() {
+				@Override
+				public String map(String value) throws Exception {
+					System.out.println("SEEING MAIN INPUT: " + value);
+
+					return value;
+				}
+			})
+			.withSideInput(sideInput1)
+			.withSideInput(sideInput2)
+		;
+
+		env.execute();
+
+	}
 	/**
 	 * Tests {@link SingleOutputStreamOperator#name(String)} functionality.
 	 *
