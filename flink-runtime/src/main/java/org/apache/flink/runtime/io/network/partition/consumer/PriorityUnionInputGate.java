@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -104,6 +103,7 @@ public class PriorityUnionInputGate implements InputGate {
 		this.inputGatesWithRemainingData = Sets.newHashSetWithExpectedSize(size);
 
 		int currentNumberOfInputChannels = 0;
+		int currentNumberOfHighPriorityGates = 0;
 
 		for (InputGate inputGate : inputGates) {
 			// The offset to use for buffer or event instances received from this input gate.
@@ -111,11 +111,15 @@ public class PriorityUnionInputGate implements InputGate {
 			inputGatesWithRemainingData.add(inputGate);
 
 			currentNumberOfInputChannels += inputGate.getNumberOfInputChannels();
+
+			if (priorities.get(inputGate) == GatesPriority.HIGH) {
+				currentNumberOfHighPriorityGates++;
+			}
 		}
 
 		this.totalNumberOfInputChannels = currentNumberOfInputChannels;
 
-		this.inputGateListener = new PriorityInputGateListener(inputGates, this, priorities);
+		this.inputGateListener = new PriorityInputGateListener(inputGates, this, priorities, currentNumberOfHighPriorityGates);
 	}
 
 	/**
@@ -176,6 +180,7 @@ public class PriorityUnionInputGate implements InputGate {
 				throw new IllegalStateException("Couldn't find input gate in set of remaining " +
 					"input gates.");
 			}
+			inputGateListener.notifyConsumedInputGate(inputGate);
 		}
 
 		// Set the channel index to identify the input channel (across all unioned input gates)
@@ -229,13 +234,20 @@ public class PriorityUnionInputGate implements InputGate {
 
 		private final Map<InputGate, GatesPriority> priorities;
 
-		public PriorityInputGateListener(InputGate[] inputGates, PriorityUnionInputGate parent, final Map<InputGate, GatesPriority> priorities) {
+		/** the total number of input gates with high priority. */
+		private int currentNumberOfHighPriorityGates;
+
+		public PriorityInputGateListener(InputGate[] inputGates,
+											PriorityUnionInputGate parent,
+											final Map<InputGate, GatesPriority> priorities,
+											final int currentNumberOfHighPriorityGates) {
 			for (InputGate inputGate : inputGates) {
 				inputGate.registerListener(this);
 			}
 
 			this.parent = parent;
 			this.priorities = priorities;
+			this.currentNumberOfHighPriorityGates = currentNumberOfHighPriorityGates;
 		}
 
 		@Override
@@ -259,11 +271,16 @@ public class PriorityUnionInputGate implements InputGate {
 		}
 
 		InputGate getNextInputGateToReadFrom() throws InterruptedException {
-			InputGate ret = inputGatesWithDataHigh.poll(500, TimeUnit.MILLISECONDS);
-			if (ret == null) {
-				ret = inputGatesWithDataNormal.poll(250, TimeUnit.MILLISECONDS);
+			if (currentNumberOfHighPriorityGates > 0) {
+				return inputGatesWithDataHigh.take();
 			}
-			return ret;
+			return inputGatesWithDataNormal.take();
+		}
+
+		public void notifyConsumedInputGate(InputGate consumedGate) {
+			if (priorities.get(consumedGate) == GatesPriority.HIGH) {
+				currentNumberOfHighPriorityGates--;
+			}
 		}
 
 		public void registerListener(EventListener<InputGate> listener) {
