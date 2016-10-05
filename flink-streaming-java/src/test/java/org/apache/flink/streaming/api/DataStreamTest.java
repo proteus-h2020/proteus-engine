@@ -41,6 +41,7 @@ import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.datastream.SplitStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
 import org.apache.flink.streaming.api.functions.co.CoFlatMapFunction;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.streaming.api.functions.sink.DiscardingSink;
@@ -50,6 +51,7 @@ import org.apache.flink.streaming.api.graph.StreamEdge;
 import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.assigners.GlobalWindows;
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger;
 import org.apache.flink.streaming.api.windowing.triggers.PurgingTrigger;
@@ -65,6 +67,8 @@ import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.util.Collector;
 
 import org.junit.Test;
+
+import javax.annotation.Nullable;
 
 import static org.junit.Assert.*;
 
@@ -209,21 +213,39 @@ public class DataStreamTest {
 	public void testSideInputs() throws Exception {
 
 		// set up the execution environment
+
+
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(2);
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-		env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
-		//env.disableOperatorChaining();
+		env.getCheckpointConfig().setCheckpointInterval(5000);
+		env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
 
 		DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
 
-		int q = 1000;
+		int q = 1000000;
 		ArrayList<Integer> integers = new ArrayList<>(q);
 		for (int i = 0; i < q; i++) {
 			integers.add(i);
 		}
 
-		DataStream<Integer> sideSource1 = env.fromCollection(integers);
+		DataStream<Integer> sideSource1 = env.fromCollection(integers).assignTimestampsAndWatermarks(new AssignerWithPunctuatedWatermarks<Integer>() {
+
+			private long counter = 0;
+
+			@Nullable
+			@Override
+			public Watermark checkAndGetNextWatermark(Integer lastElement, long extractedTimestamp) {
+				return new Watermark(counter - 1);
+			}
+
+			@Override
+			public long extractTimestamp(Integer element, long previousElementTimestamp) {
+				return counter++;
+			}
+		});
+
+
 		DataStream<String> sideSource2 = env.fromElements("A", "B", "C");
 
 		final SideInput<Integer> sideInput1 = new BroadcastedSideInput<>(sideSource1);
@@ -234,9 +256,11 @@ public class DataStreamTest {
 				@Override
 				public String map(String value) throws Exception {
 
-					List<Integer> side = getRuntimeContext().getSideInput(sideInput1);
+					ArrayList<Integer> side = (ArrayList<Integer>) getRuntimeContext().getSideInput(sideInput1);
 
-					System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side);
+
+
+					System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side.get(999999));
 
 
 

@@ -19,11 +19,13 @@
 package org.apache.flink.streaming.runtime.io;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.Gauge;
+import org.apache.flink.runtime.io.network.partition.consumer.PriorityUnionInputGate;
 import org.apache.flink.runtime.jobgraph.tasks.StatefulTask;
 import org.apache.flink.runtime.metrics.groups.IOMetricGroup;
 import org.apache.flink.runtime.accumulators.AccumulatorRegistry;
@@ -84,8 +86,9 @@ public class StreamSideInputsProcessor {
 
 	private final int[] inputMapping;
 
+
 	@SuppressWarnings("unchecked")
-	public StreamSideInputsProcessor(InputGate[] inputGates,
+	public StreamSideInputsProcessor(PriorityUnionInputGate inputGate,
 								TypeSerializer<?>[] inputsSerializers,
 								int[] inputMapping,
 								StatefulTask checkpointedTask,
@@ -93,7 +96,6 @@ public class StreamSideInputsProcessor {
 								IOManager ioManager,
 								boolean enableWatermarkMultiplexing) throws IOException {
 
-		InputGate inputGate = InputGateUtil.createInputGate(inputGates);
 
 		if (checkpointMode == CheckpointingMode.EXACTLY_ONCE) {
 			this.barrierHandler = new BarrierBuffer(inputGate, ioManager);
@@ -111,7 +113,6 @@ public class StreamSideInputsProcessor {
 
 		this.inputMapping = inputMapping;
 
-
 		this.deserializationDelegate = new NonReusingDeserializationDelegate[inputsSerializers.length];
 
 		for (int i = 0; i < deserializationDelegate.length; i++) {
@@ -125,10 +126,10 @@ public class StreamSideInputsProcessor {
 			}
 		}
 
-
+		int channelsCount = inputGate.getNumberOfInputChannels();
 
 		// Initialize one deserializer per input channel
-		this.recordDeserializers = new SpillingAdaptiveSpanningRecordDeserializer[inputGate.getNumberOfInputChannels()];
+		this.recordDeserializers = new SpillingAdaptiveSpanningRecordDeserializer[channelsCount];
 
 		for (int i = 0; i < recordDeserializers.length; i++) {
 			recordDeserializers[i] = new SpillingAdaptiveSpanningRecordDeserializer<>(

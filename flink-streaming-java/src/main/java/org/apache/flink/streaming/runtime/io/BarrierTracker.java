@@ -66,7 +66,7 @@ public class BarrierTracker implements CheckpointBarrierHandler {
 	public BarrierTracker(InputGate inputGate) {
 		this.inputGate = inputGate;
 		this.totalNumberOfInputChannels = inputGate.getNumberOfInputChannels();
-		this.pendingCheckpoints = new ArrayDeque<CheckpointBarrierCount>();
+		this.pendingCheckpoints = new ArrayDeque<>();
 	}
 
 	@Override

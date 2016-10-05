@@ -20,12 +20,12 @@ package org.apache.flink.streaming.runtime.tasks;
 
 import com.google.common.collect.Maps;
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.accumulators.AccumulatorRegistry;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
+import org.apache.flink.runtime.io.network.partition.consumer.PriorityUnionInputGate;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.graph.StreamEdge;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
@@ -55,7 +55,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 	private volatile boolean running = true;
 
-	Map<UUID, List> sideInputsCollector;
+	private Map<UUID, List> sideInputsCollector;
 
 	@Override
 	@SuppressWarnings("checked")
@@ -77,7 +77,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 			List<StreamEdge> inEdges = configuration.getInPhysicalEdges(userClassLoader);
 
 			int i;
-			final Map<InputGate, GatesPriority> prio = Maps.newHashMapWithExpectedSize(inputGates.length);
+			final Map<InputGate, PriorityUnionInputGate.GatesPriority> prio = Maps.newHashMapWithExpectedSize(inputGates.length);
 			Map<InputGate, Integer> inputMapping = Maps.newHashMapWithExpectedSize(inputGates.length);
 
 
@@ -86,7 +86,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 				if (inputType == 0) {
 					inputGates[inputType] = env.getInputGate(i);
 					inputMapping.put(inputGates[inputType], 0);
-					prio.put(inputGates[inputType], GatesPriority.NORMAL);
+					prio.put(inputGates[inputType], PriorityUnionInputGate.GatesPriority.NORMAL);
 					serializers[0] = configuration.getTypeSerializerIn1(userClassLoader);
 				} else {
 					InputGate reader = env.getInputGate(i);
@@ -94,7 +94,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 					inputGates[inputType] = reader;
 					serializers[inputType] = info.getSerializer();
 					inputMapping.put(reader, inputType);
-					prio.put(reader, GatesPriority.HIGH);
+					prio.put(reader, PriorityUnionInputGate.GatesPriority.HIGH);
 				}
 
 			}
@@ -162,7 +162,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 
 
-			inputProcessor = new StreamSideInputsProcessor(inputGates,
+			inputProcessor = new StreamSideInputsProcessor(new PriorityUnionInputGate(inputGates, prio),
 				serializers,
 				realInputMapping,
 				this,
@@ -221,9 +221,5 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 	}
 
 
-	public enum GatesPriority {
-		HIGH,
-		NORMAL,
-		LOW
-	}
+
 }

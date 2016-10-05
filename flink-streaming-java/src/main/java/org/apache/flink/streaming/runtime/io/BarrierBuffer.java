@@ -98,7 +98,7 @@ public class BarrierBuffer implements CheckpointBarrierHandler {
 		this.blockedChannels = new boolean[this.totalNumberOfInputChannels];
 		
 		this.bufferSpiller = new BufferSpiller(ioManager, inputGate.getPageSize());
-		this.queuedBuffered = new ArrayDeque<BufferSpiller.SpilledBufferOrEventSequence>();
+		this.queuedBuffered = new ArrayDeque<>();
 	}
 
 	// ------------------------------------------------------------------------
