@@ -67,4 +67,12 @@ public class SideInputInformation <TYPE> implements Serializable {
 	public TypeSerializer<TYPE> getSerializer() {
 		return serializer;
 	}
+
+	public UUID getId() {
+		return id;
+	}
+
+	public int getTypeId() {
+		return typeId;
+	}
 }

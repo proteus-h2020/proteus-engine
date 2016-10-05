@@ -39,12 +39,15 @@ import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.tasks.MultipleInputsStreamTask;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.streaming.runtime.tasks.TimeServiceProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.RunnableFuture;
 
 /**
@@ -365,6 +368,8 @@ public abstract class AbstractStreamOperator<OUT>
 		return chainingStrategy;
 	}
 
+
+
 	public class CountingOutput implements Output<StreamRecord<OUT>> {
 		private final Output<StreamRecord<OUT>> output;
 		private final Counter numRecordsOut;
@@ -390,4 +395,18 @@ public abstract class AbstractStreamOperator<OUT>
 			output.close();
 		}
 	}
+
+
+	// ------------------------------------------------------------------------
+	//  Side inputs handling
+	// ------------------------------------------------------------------------
+
+	public <T> List<T> getSideInput(UUID id) {
+		if (container instanceof MultipleInputsStreamTask) {
+			MultipleInputsStreamTask<?, ?> task = (MultipleInputsStreamTask<?, ?>) container;
+			return task.getSideInput(id);
+		}
+		throw new UnsupportedOperationException("cannot get side input from a not 1-input-operator");
+	}
+
 }

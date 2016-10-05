@@ -40,6 +40,7 @@ import org.apache.flink.metrics.MetricGroup;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
@@ -205,4 +206,14 @@ public abstract class AbstractRuntimeUDFContext implements RuntimeContext {
 		throw new UnsupportedOperationException(
 				"This state is only accessible by functions executed on a KeyedStream");
 	}
+
+
+	@Override
+	@PublicEvolving
+	public <T> List<T> getSideInput(SideInput<T> sideInput) {
+		throw new UnsupportedOperationException(
+			"This state is only accessible by functions executed on a DataStream");
+	}
+
+
 }

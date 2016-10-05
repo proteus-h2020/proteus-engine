@@ -17,6 +17,7 @@
 
 package org.apache.flink.streaming.api.datastream;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -341,7 +342,7 @@ public class DataStream<T> {
 	}
 
 
-	public <R> DataStream<T> withSideInput(SideInput<R> sideInput) {
+	public <R extends Serializable> DataStream<T> withSideInput(SideInput<R> sideInput) {
 
 		if (sideInput instanceof BroadcastedSideInput) {
 			DataStream<R> oth = ((BroadcastedSideInput<R>) sideInput).stream();

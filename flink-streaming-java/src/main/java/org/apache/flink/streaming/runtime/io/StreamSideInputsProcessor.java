@@ -80,7 +80,7 @@ public class StreamSideInputsProcessor {
 
 	private final DeserializationDelegate<StreamElement>[] deserializationDelegate;
 
-	private Counter numRecordsIn;
+	//private Counter numRecordsIn;
 
 	private final int[] inputMapping;
 
@@ -148,9 +148,9 @@ public class StreamSideInputsProcessor {
 		if (isFinished) {
 			return false;
 		}
-		if (numRecordsIn == null) {
-			numRecordsIn = wrappers[0].getNumberRecordsInCounter();
-		}
+		//if (numRecordsIn == null) {
+		//	numRecordsIn = wrappers[0].getNumberRecordsInCounter();
+		//}
 
 		while (true) {
 			if (currentRecordDeserializer != null) {
@@ -185,7 +185,7 @@ public class StreamSideInputsProcessor {
 						// now we can do the actual processing
 						StreamRecord<?> record = recordOrWatermark.asRecord();
 						synchronized (lock) {
-							numRecordsIn.inc();
+							wrappers[inputIndex].getNumberRecordsInCounter().inc();
 							wrappers[inputIndex].processElement(record);
 						}
 						return true;

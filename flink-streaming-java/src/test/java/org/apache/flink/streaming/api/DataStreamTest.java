@@ -17,6 +17,7 @@
 
 package org.apache.flink.streaming.api;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.flink.api.common.functions.FilterFunction;
@@ -215,7 +216,14 @@ public class DataStreamTest {
 		//env.disableOperatorChaining();
 
 		DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
-		DataStream<Integer> sideSource1 = env.fromElements(1, 2, 3, 4, 5);
+
+		int q = 1000;
+		ArrayList<Integer> integers = new ArrayList<>(q);
+		for (int i = 0; i < q; i++) {
+			integers.add(i);
+		}
+
+		DataStream<Integer> sideSource1 = env.fromCollection(integers);
 		DataStream<String> sideSource2 = env.fromElements("A", "B", "C");
 
 		final SideInput<Integer> sideInput1 = new BroadcastedSideInput<>(sideSource1);
@@ -225,7 +233,12 @@ public class DataStreamTest {
 			.map(new RichMapFunction<String, String>() {
 				@Override
 				public String map(String value) throws Exception {
-					System.out.println("SEEING MAIN INPUT: " + value);
+
+					List<Integer> side = getRuntimeContext().getSideInput(sideInput1);
+
+					System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side);
+
+
 
 					return value;
 				}
@@ -233,6 +246,7 @@ public class DataStreamTest {
 			.withSideInput(sideInput1)
 			.withSideInput(sideInput2)
 		;
+
 
 		env.execute("side inputs");
 

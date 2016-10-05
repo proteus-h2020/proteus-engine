@@ -20,6 +20,7 @@ package org.apache.flink.streaming.runtime.tasks;
 
 import com.google.common.collect.Maps;
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.accumulators.AccumulatorRegistry;
@@ -32,15 +33,21 @@ import org.apache.flink.streaming.api.transformations.util.SideInputInformation;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.io.StreamSideInputsProcessor;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Internal
 public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamOperator<IN, OUT>> {
+
+	private static final Logger LOG = LoggerFactory.getLogger(MultipleInputsStreamTask.class);
 
 	private StreamSideInputsProcessor inputProcessor;
 
@@ -48,7 +55,10 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 	private volatile boolean running = true;
 
+	Map<UUID, List> sideInputsCollector;
+
 	@Override
+	@SuppressWarnings("checked")
 	public void init() throws Exception {
 		StreamConfig configuration = getConfiguration();
 		ClassLoader userClassLoader = getUserCodeClassLoader();
@@ -63,8 +73,6 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 			Map<Integer, SideInputInformation<?>> sideInfos = configuration.getSideInputsTypeSerializers(userClassLoader);
 			TypeSerializer<?>[] serializers = new TypeSerializer<?>[1 + sideInfos.size()];
 			wrappers = new OperatorWrapper[serializers.length];
-
-			serializers[0] = configuration.getTypeSerializerIn1(userClassLoader);
 
 			List<StreamEdge> inEdges = configuration.getInPhysicalEdges(userClassLoader);
 
@@ -91,7 +99,23 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 			}
 
+			Arrays.sort(inputGates, new Comparator<InputGate>() {
+				@Override
+				public int compare(InputGate o1, InputGate o2) {
+					return prio.get(o1).compareTo(prio.get(o2));
+				}
+			});
+
+			int[] realInputMapping = new int[inputGates.length];
+
+			for (i = 0; i < inputGates.length; i++) {
+				realInputMapping[i] = inputMapping.get(inputGates[i]);
+			}
+
 			wrappers[0] = new OperatorWrapper<IN>() {
+
+				private final Counter counter = headOperator.getMetricGroup().counter("numRecordsIn");
+
 				@Override
 				public void processElement(StreamRecord<IN> record) throws Exception {
 					headOperator.setKeyContextElement1(record);
@@ -105,35 +129,38 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 				@Override
 				public Counter getNumberRecordsInCounter() {
-					return headOperator.getMetricGroup().counter("numRecordsIn");
+					return counter;
 				}
 			};
 
+			sideInputsCollector = Maps.newHashMapWithExpectedSize(numberOfSideInputs);
+
 			for (i = 1; i < wrappers.length; i++) {
-				wrappers[i] = new OperatorWrapper<IN>() {
+				final UUID id = sideInfos.get(i).getId();
+				final int typeId = sideInfos.get(i).getTypeId();
+				//final TypeInformation<?> info = sideInfos.get(i).getType();
+				sideInputsCollector.put(id, new ArrayList<>());
+				wrappers[i] = new OperatorWrapper() {
+
+					private final Counter counter = headOperator.getMetricGroup().counter("numRecordsIn" + typeId);
+
 					@Override
-					public void processElement(StreamRecord<IN> record) throws Exception {
-						System.out.println(record);
+					public void processElement(StreamRecord record) throws Exception {
+						sideInputsCollector.get(id).add(record.getValue());
 					}
 
 					@Override
 					public void processWatermark(Watermark mark) throws Exception {
 					}
+
+					@Override
+					public Counter getNumberRecordsInCounter() {
+						return counter;
+					}
 				};
 			}
 
-			Arrays.sort(inputGates, new Comparator<InputGate>() {
-				@Override
-				public int compare(InputGate o1, InputGate o2) {
-					return prio.get(o1).compareTo(prio.get(o2));
-				}
-			});
 
-			int[] realInputMapping = new int[inputGates.length];
-
-			for (i = 0; i < inputGates.length; i++) {
-				realInputMapping[i] = inputMapping.get(inputGates[i]);
-			}
 
 			inputProcessor = new StreamSideInputsProcessor(inputGates,
 				serializers,
@@ -173,6 +200,13 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 		running = false;
 	}
 
+	@SuppressWarnings("unchecked")
+	public <T> List<T> getSideInput(UUID id) {
+		if (sideInputsCollector.containsKey(id)) {
+			return sideInputsCollector.get(id);
+		}
+		throw new RuntimeException("side input lookup failed - missing item?");
+	}
 
 
 	public abstract class OperatorWrapper <TYPE> implements Serializable {

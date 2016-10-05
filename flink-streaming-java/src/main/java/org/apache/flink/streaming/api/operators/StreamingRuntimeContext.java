@@ -22,6 +22,7 @@ import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.functions.BroadcastVariableInitializer;
 import org.apache.flink.api.common.functions.util.AbstractRuntimeUDFContext;
+import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ReducingState;
@@ -164,6 +165,13 @@ public class StreamingRuntimeContext extends AbstractRuntimeUDFContext {
 	 */
 	public long getBufferTimeout() {
 		return streamConfig.getBufferTimeout();
+	}
+
+
+	@Override
+	@PublicEvolving
+	public <T> List<T> getSideInput(SideInput<T> sideInput) {
+		return operator.getSideInput(sideInput.id());
 	}
 
 }
