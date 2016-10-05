@@ -24,7 +24,7 @@ import org.apache.flink.api.common.functions.util.SideInput;
 import java.io.Serializable;
 import java.util.UUID;
 
-public class BroadcastedSideInput<TYPE extends Serializable> implements SideInput<TYPE>, Serializable {
+public class BroadcastedSideInput<TYPE> implements SideInput<TYPE>, Serializable {
 
 	private UUID id;
 	private transient DataStream<TYPE> stream;

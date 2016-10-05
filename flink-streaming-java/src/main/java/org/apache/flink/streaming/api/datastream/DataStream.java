@@ -342,6 +342,13 @@ public class DataStream<T> {
 	}
 
 
+	/**
+	 * Adds a side input to the current data steam
+	 * @param sideInput the side input holder
+	 * @param <R> the inner type of the data stream
+	 * @return the current data stream that owns the side input
+	 */
+	@PublicEvolving
 	public <R extends Serializable> DataStream<T> withSideInput(SideInput<R> sideInput) {
 
 		if (sideInput instanceof BroadcastedSideInput) {

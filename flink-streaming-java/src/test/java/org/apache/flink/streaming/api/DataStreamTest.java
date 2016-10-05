@@ -217,7 +217,7 @@ public class DataStreamTest {
 		env.setParallelism(2);
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 		env.getCheckpointConfig().setCheckpointInterval(5000);
-		env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
+		//env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
 
 		DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
 

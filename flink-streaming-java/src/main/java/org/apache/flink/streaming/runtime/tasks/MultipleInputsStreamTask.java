@@ -83,17 +83,15 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 			for (i = 0; i < inEdges.size(); i++) {
 				int inputType = inEdges.get(i).getTypeNumber();
+				InputGate reader = env.getInputGate(i);
+				inputGates[inputType] = reader;
+				inputMapping.put(reader, inputType);
 				if (inputType == 0) {
-					inputGates[inputType] = env.getInputGate(i);
-					inputMapping.put(inputGates[inputType], 0);
 					prio.put(inputGates[inputType], PriorityUnionInputGate.GatesPriority.NORMAL);
-					serializers[0] = configuration.getTypeSerializerIn1(userClassLoader);
+					serializers[inputType] = configuration.getTypeSerializerIn1(userClassLoader);
 				} else {
-					InputGate reader = env.getInputGate(i);
 					SideInputInformation<?> info = sideInfos.get(inputType);
-					inputGates[inputType] = reader;
 					serializers[inputType] = info.getSerializer();
-					inputMapping.put(reader, inputType);
 					prio.put(reader, PriorityUnionInputGate.GatesPriority.HIGH);
 				}
 

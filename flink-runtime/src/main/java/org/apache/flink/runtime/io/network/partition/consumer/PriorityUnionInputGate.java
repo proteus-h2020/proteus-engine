@@ -69,8 +69,7 @@ public class PriorityUnionInputGate implements InputGate {
 
 	public enum GatesPriority {
 		HIGH,
-		NORMAL,
-		LOW
+		NORMAL
 	}
 
 	/** The input gates to union. */
@@ -223,7 +222,6 @@ public class PriorityUnionInputGate implements InputGate {
 
 		private final PriorityUnionInputGate parent;
 
-		private final BlockingQueue<InputGate> inputGatesWithDataLow = new LinkedBlockingQueue<>();
 		private final BlockingQueue<InputGate> inputGatesWithDataNormal = new LinkedBlockingQueue<>();
 		private final BlockingQueue<InputGate> inputGatesWithDataHigh = new LinkedBlockingQueue<>();
 
@@ -251,9 +249,6 @@ public class PriorityUnionInputGate implements InputGate {
 				case NORMAL:
 					inputGatesWithDataNormal.add(inputGate);
 					break;
-				case LOW:
-					inputGatesWithDataLow.add(inputGate);
-					break;
 				default:
 					throw new RuntimeException("unsupported priority");
 			}
@@ -267,9 +262,6 @@ public class PriorityUnionInputGate implements InputGate {
 			InputGate ret = inputGatesWithDataHigh.poll(500, TimeUnit.MILLISECONDS);
 			if (ret == null) {
 				ret = inputGatesWithDataNormal.poll(250, TimeUnit.MILLISECONDS);
-			}
-			if (ret == null) {
-				ret = inputGatesWithDataLow.poll(250, TimeUnit.MILLISECONDS);
 			}
 			return ret;
 		}

@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.scala
 
 import org.apache.flink.annotation.{Internal, Public, PublicEvolving}
 import org.apache.flink.api.common.ExecutionConfig
+import org.apache.flink.api.common.functions.util.SideInput
 import org.apache.flink.api.common.functions.{FilterFunction, FlatMapFunction, MapFunction, Partitioner}
 import org.apache.flink.api.common.io.OutputFormat
 import org.apache.flink.api.common.typeinfo.TypeInformation
@@ -321,6 +322,18 @@ class DataStream[T](stream: JavaStream[T]) {
       override def getProducedType: TypeInformation[K] = keyType
     }
     asScalaStream(new JavaKeyedStream(stream, keyExtractor, keyType))
+  }
+
+  /**
+    * Adds a side input to the current data steam
+    * @param sideInput the side input holder
+    * @tparam R the inner type of the data stream
+    * @return the current data stream that owns the side input
+    */
+  @PublicEvolving
+  def withSideInput[R](sideInput: SideInput[R]): DataStream[T] = {
+    javaStream.withSideInput(sideInput)
+    this
   }
 
   /**
