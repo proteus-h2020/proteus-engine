@@ -20,9 +20,7 @@ package org.apache.flink.streaming.runtime.operators.windowing;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class KeyMapPutIfAbsentTest {
 	

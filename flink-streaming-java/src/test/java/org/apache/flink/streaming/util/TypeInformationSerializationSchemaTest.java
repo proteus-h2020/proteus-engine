@@ -23,7 +23,6 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.core.testutils.CommonTestUtils;
 import org.apache.flink.streaming.util.serialization.TypeInformationSerializationSchema;
-
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -31,7 +30,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class TypeInformationSerializationSchemaTest {
 	

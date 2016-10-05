@@ -67,12 +67,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * This test checks that task restores that get stuck in the presence of interrupts

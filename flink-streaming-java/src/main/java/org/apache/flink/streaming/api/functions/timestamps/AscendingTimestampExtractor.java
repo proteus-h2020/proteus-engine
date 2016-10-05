@@ -19,7 +19,6 @@
 package org.apache.flink.streaming.api.functions.timestamps;
 
 import org.apache.flink.annotation.PublicEvolving;
-
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.slf4j.Logger;

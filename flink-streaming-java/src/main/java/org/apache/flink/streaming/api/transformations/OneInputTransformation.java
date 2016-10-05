@@ -21,10 +21,8 @@ import com.google.common.collect.Lists;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec;
 
 import java.util.Collection;
 import java.util.Collections;

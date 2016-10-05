@@ -17,11 +17,11 @@
 
 package org.apache.flink.streaming.api.graph;
 
-import java.io.Serializable;
-import java.util.List;
-
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
+
+import java.io.Serializable;
+import java.util.List;
 
 /**
  * An edge in the streaming topology. One edge like this does not necessarily

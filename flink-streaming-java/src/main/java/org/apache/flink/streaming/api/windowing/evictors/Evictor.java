@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.windowing.evictors;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.streaming.api.windowing.windows.Window;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+
 import java.io.Serializable;
 
 /**

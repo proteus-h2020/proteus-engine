@@ -23,7 +23,6 @@ import org.apache.flink.runtime.io.network.api.serialization.EventSerializer;
 import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.streaming.runtime.io.BufferSpiller.SpilledBufferOrEventSequence;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

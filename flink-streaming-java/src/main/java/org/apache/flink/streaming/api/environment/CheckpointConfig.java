@@ -18,8 +18,8 @@
 
 package org.apache.flink.streaming.api.environment;
 
-import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.annotation.Public;
+import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.streaming.api.CheckpointingMode;
 
 import static java.util.Objects.requireNonNull;

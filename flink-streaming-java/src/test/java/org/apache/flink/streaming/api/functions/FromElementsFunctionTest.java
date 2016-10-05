@@ -31,7 +31,6 @@ import org.apache.flink.streaming.api.functions.source.FromElementsFunction;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.types.Value;
 import org.apache.flink.util.ExceptionUtils;
-
 import org.junit.Test;
 
 import java.io.IOException;

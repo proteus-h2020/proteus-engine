@@ -26,7 +26,6 @@ import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.windows.Window;
 
 import java.io.Serializable;
-
 import java.util.Collection;
 
 /**

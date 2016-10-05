@@ -18,13 +18,13 @@
 
 package org.apache.flink.streaming.runtime.streamrecord;
 
-import java.io.IOException;
-
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.util.Preconditions;
+
+import java.io.IOException;
 
 /**
  * Serializer for {@link StreamRecord}. This version ignores timestamps and only deals with

@@ -347,5 +347,12 @@ public interface RuntimeContext {
 	@PublicEvolving
 	<T> ReducingState<T> getReducingState(ReducingStateDescriptor<T> stateProperties);
 
+	/**
+	 * this methods lookups for a side input binded in the current UDF.
+	 * @param sideInput
+	 * @param <T>
+	 * @return
+	 */
+	@PublicEvolving
 	<T> List<T> getSideInput(SideInput<T> sideInput);
 }

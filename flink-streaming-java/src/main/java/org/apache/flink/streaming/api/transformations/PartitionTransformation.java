@@ -18,7 +18,6 @@
 package org.apache.flink.streaming.api.transformations;
 
 import com.google.common.collect.Lists;
-
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;

@@ -17,9 +17,9 @@
 
 package org.apache.flink.streaming.api.collector.selector;
 
-import java.io.Serializable;
-
 import org.apache.flink.annotation.PublicEvolving;
+
+import java.io.Serializable;
 
 @PublicEvolving
 public interface OutputSelectorWrapper<OUT> extends Serializable {

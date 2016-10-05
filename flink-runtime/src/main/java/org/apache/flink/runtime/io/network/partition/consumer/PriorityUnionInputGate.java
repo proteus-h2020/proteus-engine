@@ -25,8 +25,6 @@ import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
 import org.apache.flink.runtime.util.event.EventListener;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -164,7 +162,7 @@ public class PriorityUnionInputGate implements InputGate {
 		//final InputGate inputGate = inputGateListener.getNextInputGateToReadFrom();
 
 		InputGate inputGate;
-		
+
 		do {
 			inputGate = inputGateListener.getNextInputGateToReadFrom();
 		} while (inputGate == null);
