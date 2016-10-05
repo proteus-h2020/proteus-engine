@@ -164,12 +164,7 @@ public class PriorityUnionInputGate implements InputGate {
 
 		//final InputGate inputGate = inputGateListener.getNextInputGateToReadFrom();
 
-		InputGate inputGate;
-
-		do {
-			inputGate = inputGateListener.getNextInputGateToReadFrom();
-		} while (inputGate == null);
-
+		final InputGate inputGate = inputGateListener.getNextInputGateToReadFrom();
 		final BufferOrEvent bufferOrEvent = inputGate.getNextBufferOrEvent();
 
 		if (bufferOrEvent.isEvent()
