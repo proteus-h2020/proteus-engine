@@ -184,7 +184,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 		final Object lock = getCheckpointLock();
 
 		while (running && inputProcessor.processInput(wrapper, lock)) {
-			checkTimerException();
+			// all the work happens in the "processInput" method
 		}
 	}
 
