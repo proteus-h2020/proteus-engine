@@ -24,6 +24,7 @@ import org.apache.flink.api.common.functions.FoldFunction;
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.RichFunction;
+import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.common.state.FoldingStateDescriptor;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
@@ -58,6 +59,9 @@ import org.apache.flink.streaming.runtime.operators.windowing.functions.Internal
 import org.apache.flink.streaming.runtime.operators.windowing.functions.InternalSingleValueWindowFunction;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecordSerializer;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A {@code WindowedStream} represents a data stream where elements are grouped by
@@ -102,12 +106,16 @@ public class WindowedStream<T, K, W extends Window> {
 	/** The user-specified allowed lateness. */
 	private long allowedLateness = 0L;
 
+	/** The registered side inputs */
+	private Set<SideInput<?>> bindedSideInputs;
+
 	@PublicEvolving
 	public WindowedStream(KeyedStream<T, K> input,
 			WindowAssigner<? super T, W> windowAssigner) {
 		this.input = input;
 		this.windowAssigner = windowAssigner;
 		this.trigger = windowAssigner.getDefaultTrigger(input.getExecutionEnvironment());
+		this.bindedSideInputs = new HashSet<>();
 	}
 
 	/**
@@ -323,6 +331,8 @@ public class WindowedStream<T, K, W extends Window> {
 					allowedLateness);
 		}
 
+		injectSideInputs();
+
 		return input.transform(opName, resultType, operator);
 	}
 
@@ -411,6 +421,8 @@ public class WindowedStream<T, K, W extends Window> {
 					trigger,
 					allowedLateness);
 		}
+
+		injectSideInputs();
 
 		return input.transform(opName, resultType, operator);
 	}
@@ -502,6 +514,8 @@ public class WindowedStream<T, K, W extends Window> {
 				trigger,
 				allowedLateness);
 		}
+
+		injectSideInputs();
 
 		return input.transform(opName, resultType, operator);
 	}
@@ -731,6 +745,8 @@ public class WindowedStream<T, K, W extends Window> {
 								input.getKeyType().createSerializer(getExecutionEnvironment().getConfig()),
 								input.getType().createSerializer(getExecutionEnvironment().getConfig()),
 								windowLength, windowSlide);
+
+				injectSideInputs();
 				return input.transform(opName, resultType, op);
 			}
 			else if (function instanceof WindowFunction) {
@@ -742,6 +758,8 @@ public class WindowedStream<T, K, W extends Window> {
 						input.getKeyType().createSerializer(getExecutionEnvironment().getConfig()),
 						input.getType().createSerializer(getExecutionEnvironment().getConfig()),
 						windowLength, windowSlide);
+
+				injectSideInputs();
 				return input.transform(opName, resultType, op);
 			}
 		} else if (windowAssigner instanceof TumblingProcessingTimeWindows && trigger instanceof ProcessingTimeTrigger && evictor == null) {
@@ -763,6 +781,8 @@ public class WindowedStream<T, K, W extends Window> {
 								input.getKeyType().createSerializer(getExecutionEnvironment().getConfig()),
 								input.getType().createSerializer(getExecutionEnvironment().getConfig()),
 								windowLength, windowSlide);
+
+				injectSideInputs();
 				return input.transform(opName, resultType, op);
 			}
 			else if (function instanceof WindowFunction) {
@@ -774,6 +794,8 @@ public class WindowedStream<T, K, W extends Window> {
 						input.getKeyType().createSerializer(getExecutionEnvironment().getConfig()),
 						input.getType().createSerializer(getExecutionEnvironment().getConfig()),
 						windowLength, windowSlide);
+
+				injectSideInputs();
 				return input.transform(opName, resultType, op);
 			}
 		}
@@ -787,5 +809,31 @@ public class WindowedStream<T, K, W extends Window> {
 
 	public TypeInformation<T> getInputType() {
 		return input.getType();
+	}
+
+
+	// ------------------------------------------------------------------------
+	//  Side Input Handling
+	// ------------------------------------------------------------------------
+
+	/**
+	 * Adds a side input to the current data steam
+	 * @param sideInput the side input holder
+	 * @param <TYPE> the inner type of the data stream
+	 * @return the current data stream that owns the side input
+	 */
+	@PublicEvolving
+	@SuppressWarnings("unchecked")
+	public <TYPE, SELF extends WindowedStream<T, K, W>> SELF withSideInput(SideInput<TYPE> sideInput) {
+		bindedSideInputs.add(sideInput);
+		return (SELF) this;
+	}
+
+	@PublicEvolving
+	private void injectSideInputs() {
+		// inject side input
+		for (SideInput<?> sideInput : bindedSideInputs) {
+			input.withSideInput(sideInput);
+		}
 	}
 }

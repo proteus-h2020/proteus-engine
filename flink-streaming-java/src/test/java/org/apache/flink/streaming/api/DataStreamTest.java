@@ -43,16 +43,20 @@ import org.apache.flink.streaming.api.functions.co.CoFlatMapFunction;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.streaming.api.functions.sink.DiscardingSink;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
+import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.api.functions.windowing.AllWindowFunction;
+import org.apache.flink.streaming.api.functions.windowing.RichAllWindowFunction;
 import org.apache.flink.streaming.api.graph.StreamEdge;
 import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.assigners.GlobalWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.triggers.CountTrigger;
 import org.apache.flink.streaming.api.windowing.triggers.PurgingTrigger;
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow;
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.streaming.runtime.partitioner.BroadcastPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.CustomPartitionerWrapper;
 import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
@@ -67,6 +71,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -208,6 +213,77 @@ public class DataStreamTest {
 	}
 
 	@Test
+	public void testWindowsSideInputs() throws Exception {
+
+		// set up the execution environment
+
+
+		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(2);
+		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+		env.getCheckpointConfig().setCheckpointInterval(1000);
+		//env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
+
+		//DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
+
+		DataStream<Integer> source1 = env.addSource(new SourceFunction<Integer>() {
+			private int counter = 0;
+			private int value = 0;
+			@Override
+			public void run(SourceContext<Integer> ctx) throws Exception {
+				while (counter < 8200) {
+					ctx.collect(value++);
+					counter++;
+					Thread.sleep(10);
+				}
+			}
+
+			@Override
+			public void cancel() {
+
+			}
+		});
+
+		int q = 5;
+		ArrayList<Integer> integers = new ArrayList<>(q);
+		for (int i = 0; i < q; i++) {
+			integers.add(i);
+		}
+
+		DataStream<Integer> sideSource1 = env.fromCollection(integers);
+		DataStream<String> sideSource2 = env.fromElements("A", "B", "C", "D");
+
+		final SideInput<Integer> sideInput1 = new BroadcastedSideInput<>(sideSource1);
+		final SideInput<String> sideInput2 = new BroadcastedSideInput<>(sideSource2);
+
+		source1
+			.assignTimestampsAndWatermarks(new AssignerWithPunctuatedWatermarks<Integer>() {
+				private long counter = 0;
+				@Nullable
+				@Override
+				public Watermark checkAndGetNextWatermark(Integer lastElement, long extractedTimestamp) {
+					return new Watermark(counter - 1);
+				}
+
+				@Override
+				public long extractTimestamp(Integer element, long previousElementTimestamp) {
+					return counter += 10L;
+				}
+			})
+			.timeWindowAll(Time.of(3000, TimeUnit.MILLISECONDS))
+			.apply(new RichAllWindowFunction<Integer, Void, TimeWindow>() {
+				@Override
+				public void apply(TimeWindow window, Iterable<Integer> values, Collector<Void> out) throws Exception {
+					System.out.println("SEEING MAIN INPUT: " + values + " with " + getRuntimeContext().getSideInput(sideInput2));
+				}
+			})
+			.withSideInput(sideInput1)
+			.withSideInput(sideInput2)
+		;
+		env.execute("side inputs");
+	}
+
+	@Test
 	public void testSideInputs() throws Exception {
 
 		// set up the execution environment
@@ -227,23 +303,7 @@ public class DataStreamTest {
 			integers.add(i);
 		}
 
-		DataStream<Integer> sideSource1 = env.fromCollection(integers).assignTimestampsAndWatermarks(new AssignerWithPunctuatedWatermarks<Integer>() {
-
-			private long counter = 0;
-
-			@Nullable
-			@Override
-			public Watermark checkAndGetNextWatermark(Integer lastElement, long extractedTimestamp) {
-				return new Watermark(counter - 1);
-			}
-
-			@Override
-			public long extractTimestamp(Integer element, long previousElementTimestamp) {
-				return counter++;
-			}
-		});
-
-
+		DataStream<Integer> sideSource1 = env.fromCollection(integers);
 		DataStream<String> sideSource2 = env.fromElements("A", "B", "C");
 
 		final SideInput<Integer> sideInput1 = new BroadcastedSideInput<>(sideSource1);
@@ -268,11 +328,7 @@ public class DataStreamTest {
 			.withSideInput(sideInput1)
 			.withSideInput(sideInput2)
 		;
-
-
 		env.execute("side inputs");
-
-
 	}
 	/**
 	 * Tests {@link SingleOutputStreamOperator#name(String)} functionality.

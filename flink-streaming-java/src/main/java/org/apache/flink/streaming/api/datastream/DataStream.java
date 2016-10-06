@@ -349,7 +349,8 @@ public class DataStream<T> {
 	 * @return the current data stream that owns the side input
 	 */
 	@PublicEvolving
-	public <R extends Serializable> DataStream<T> withSideInput(SideInput<R> sideInput) {
+	@SuppressWarnings("unchecked")
+	public <R, SELF extends DataStream<T>> SELF withSideInput(SideInput<R> sideInput) {
 
 		if (sideInput instanceof BroadcastedSideInput) {
 			DataStream<R> oth = ((BroadcastedSideInput<R>) sideInput).stream();
@@ -358,7 +359,7 @@ public class DataStream<T> {
 			throw new UnsupportedOperationException();
 		}
 
-		return this;
+		return (SELF) this;
 	}
 
 	/**
