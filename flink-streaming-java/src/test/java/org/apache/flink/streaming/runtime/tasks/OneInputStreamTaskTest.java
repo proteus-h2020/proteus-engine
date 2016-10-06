@@ -556,7 +556,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 		public void open() throws Exception {
 			super.open();
 
-			ListState<Integer> partitionableState = getOperatorStateBackend().getPartitionableState(TEST_DESCRIPTOR);
+			ListState<Integer> partitionableState = getOperatorStateBackend().getOperatorState(TEST_DESCRIPTOR);
 
 			if (numberSnapshotCalls == 0) {
 				for (Integer v : partitionableState.get()) {
@@ -579,7 +579,7 @@ public class OneInputStreamTaskTest extends TestLogger {
 				long checkpointId, long timestamp, CheckpointStreamFactory streamFactory) throws Exception {
 
 			ListState<Integer> partitionableState =
-					getOperatorStateBackend().getPartitionableState(TEST_DESCRIPTOR);
+					getOperatorStateBackend().getOperatorState(TEST_DESCRIPTOR);
 			partitionableState.clear();
 
 			partitionableState.add(42);
@@ -629,8 +629,10 @@ public class OneInputStreamTaskTest extends TestLogger {
 
 			assertNotNull(in);
 
-			Serializable functionState= InstantiationUtil.deserializeObject(in);
-			Integer operatorState= InstantiationUtil.deserializeObject(in);
+			ClassLoader cl = Thread.currentThread().getContextClassLoader();
+
+			Serializable functionState= InstantiationUtil.deserializeObject(in, cl);
+			Integer operatorState= InstantiationUtil.deserializeObject(in, cl);
 
 			assertEquals(random.nextInt(), functionState);
 			assertEquals(random.nextInt(), (int) operatorState);

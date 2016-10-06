@@ -15,26 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.streaming.connectors.kafka;
+package org.apache.flink.api.common.io.compression;
 
-import org.apache.flink.api.table.Row;
-import org.apache.flink.streaming.util.serialization.DeserializationSchema;
-import org.apache.flink.streaming.util.serialization.JsonRowDeserializationSchema;
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
+import org.apache.flink.annotation.Internal;
 
-public class Kafka08JsonTableSinkITCase extends KafkaTableSinkTestBase {
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
+import java.util.Collections;
+
+@Internal
+public class XZInputStreamFactory implements InflaterInputStreamFactory<XZCompressorInputStream> {
+
+	private static XZInputStreamFactory INSTANCE = null;
+
+	public static XZInputStreamFactory getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new XZInputStreamFactory();
+		}
+		return INSTANCE;
+	}
 
 	@Override
-	protected KafkaTableSink createTableSink() {
-		Kafka08JsonTableSink sink = new Kafka08JsonTableSink(
-			TOPIC,
-			createSinkProperties(),
-			createPartitioner());
-		return sink.configure(FIELD_NAMES, FIELD_TYPES);
+	public XZCompressorInputStream create(InputStream in) throws IOException {
+		return new XZCompressorInputStream(in, true);
 	}
 
-	protected DeserializationSchema<Row> createRowDeserializationSchema() {
-		return new JsonRowDeserializationSchema(
-			FIELD_NAMES, FIELD_TYPES);
+	@Override
+	public Collection<String> getCommonFileExtensions() {
+		return Collections.singleton("xz");
 	}
 }
-

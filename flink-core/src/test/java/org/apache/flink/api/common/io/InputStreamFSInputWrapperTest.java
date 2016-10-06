@@ -15,25 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.streaming.connectors.kafka;
 
-import org.apache.flink.api.table.Row;
-import org.apache.flink.streaming.util.serialization.DeserializationSchema;
-import org.apache.flink.streaming.util.serialization.JsonRowDeserializationSchema;
+package org.apache.flink.api.common.io;
 
-public class Kafka09JsonTableSinkITCase extends KafkaTableSinkTestBase {
+import java.io.InputStream;
 
-	@Override
-	protected KafkaTableSink createTableSink() {
-		Kafka09JsonTableSink sink = new Kafka09JsonTableSink(
-			TOPIC,
-			createSinkProperties(),
-			createPartitioner());
-		return sink.configure(FIELD_NAMES, FIELD_TYPES);
+import org.junit.Test;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+public class InputStreamFSInputWrapperTest {
+
+	@Test
+	public void testClose() throws Exception {
+		InputStream mockedInputStream = mock(InputStream.class);
+		InputStreamFSInputWrapper wrapper = new InputStreamFSInputWrapper(mockedInputStream);
+		wrapper.close();
+		verify(mockedInputStream).close();
 	}
 
-	protected DeserializationSchema<Row> createRowDeserializationSchema() {
-		return new JsonRowDeserializationSchema(
-			FIELD_NAMES, FIELD_TYPES);
-	}
 }
