@@ -65,7 +65,6 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class PriorityUnionInputGate implements InputGate {
 
-
 	public enum GatesPriority {
 		HIGH,
 		NORMAL
@@ -211,6 +210,12 @@ public class PriorityUnionInputGate implements InputGate {
 		}
 		return pageSize;
 	}
+
+
+	public int getNumberOfInputChannelsForGate(int idx) {
+		return inputGates[idx].getNumberOfInputChannels();
+	}
+
 
 	/**
 	 * Data availability listener at all unioned input gates.

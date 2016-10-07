@@ -53,6 +53,7 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.BroadcastedSideInput;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.ForwardedSideInput;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.functions.source.ContinuousFileMonitoringFunction;
 import org.apache.flink.streaming.api.functions.source.ContinuousFileReaderOperator;
@@ -1747,5 +1748,9 @@ public abstract class StreamExecutionEnvironment {
 
 	public <TYPE> SideInput<TYPE> newBroadcastedSideInput(DataStream<TYPE> sideInput) {
 		return new BroadcastedSideInput<>(sideInput);
+	}
+
+	public <TYPE> SideInput<TYPE> newForwardedSideInput(DataStream<TYPE> sideInput) {
+		return new ForwardedSideInput<TYPE>(sideInput);
 	}
 }

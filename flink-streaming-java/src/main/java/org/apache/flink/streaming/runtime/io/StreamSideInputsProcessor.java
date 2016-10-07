@@ -81,7 +81,7 @@ public class StreamSideInputsProcessor {
 
 	//private Counter numRecordsIn;
 
-	private final int[] inputMapping;
+	private final int[] inputChannelsMapping;
 
 
 	@SuppressWarnings("unchecked")
@@ -108,7 +108,6 @@ public class StreamSideInputsProcessor {
 			this.barrierHandler.registerCheckpointEventHandler(checkpointedTask);
 		}
 
-		this.inputMapping = inputMapping;
 
 		this.deserializationDelegate = new NonReusingDeserializationDelegate[inputsSerializers.length];
 
@@ -133,7 +132,19 @@ public class StreamSideInputsProcessor {
 				ioManager.getSpillingDirectoriesPaths());
 		}
 
-		watermarks = new long[inputGate.getNumberOfInputChannels()];
+		// TODO refactor here!
+		int low = 0;
+		this.inputChannelsMapping = new int[channelsCount];
+		for (int i = 0; i < inputMapping.length; i++) {
+			int idx = inputMapping[i];
+			int l = inputGate.getNumberOfInputChannelsForGate(i);
+			for (int j = 0; j < l; j++) {
+				inputChannelsMapping[low + j] = idx;
+			}
+			low += l;
+		}
+
+		watermarks = new long[channelsCount];
 		for (int i = 0; i < inputGate.getNumberOfInputChannels(); i++) {
 			watermarks[i] = Long.MIN_VALUE;
 		}
@@ -152,7 +163,7 @@ public class StreamSideInputsProcessor {
 
 		while (true) {
 			if (currentRecordDeserializer != null) {
-				int inputIndex = inputMapping[currentChannel];
+				int inputIndex = inputChannelsMapping[currentChannel];
 				DeserializationResult result = currentRecordDeserializer.getNextRecord(deserializationDelegate[inputIndex]);
 
 				if (result.isBufferConsumed()) {

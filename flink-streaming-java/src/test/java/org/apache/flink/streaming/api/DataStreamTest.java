@@ -39,6 +39,7 @@ import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.datastream.SplitStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
 import org.apache.flink.streaming.api.functions.co.CoFlatMapFunction;
 import org.apache.flink.streaming.api.functions.co.CoMapFunction;
@@ -225,6 +226,7 @@ public class DataStreamTest {
 		env.setParallelism(2);
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 		env.getCheckpointConfig().setCheckpointInterval(1000);
+		//env.getConfig().setAutoWatermarkInterval(2500);
 		//env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
 
 		//DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
@@ -256,15 +258,16 @@ public class DataStreamTest {
 		DataStream<Integer> sideSource1 = env.fromCollection(integers);
 		DataStream<String> sideSource2 = env.fromElements("A", "B", "C", "D");
 
-		final SideInput<Integer> sideInput1 = new BroadcastedSideInput<>(sideSource1);
-		final SideInput<String> sideInput2 = new BroadcastedSideInput<>(sideSource2);
+		final SideInput<Integer> sideInput1 = env.newBroadcastedSideInput(sideSource1);
+		final SideInput<String> sideInput2 = env.newBroadcastedSideInput(sideSource2);
 
 		source1
-			.assignTimestampsAndWatermarks(new AssignerWithPunctuatedWatermarks<Integer>() {
+			.assignTimestampsAndWatermarks(new AssignerWithPeriodicWatermarks<Integer>() {
+
 				private long counter = 0;
 				@Nullable
 				@Override
-				public Watermark checkAndGetNextWatermark(Integer lastElement, long extractedTimestamp) {
+				public Watermark getCurrentWatermark() {
 					return new Watermark(counter - 1);
 				}
 
@@ -297,7 +300,7 @@ public class DataStreamTest {
 
 		DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
 
-		int q = 1000000;
+		final int q = 1000000;
 		ArrayList<Integer> integers = new ArrayList<>(q);
 		for (int i = 0; i < q; i++) {
 			integers.add(i);
@@ -314,7 +317,7 @@ public class DataStreamTest {
 				@Override
 				public String map(String value) throws Exception {
 					ArrayList<Integer> side = (ArrayList<Integer>) getRuntimeContext().getSideInput(sideInput1);
-					System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side.get(999999));
+					System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side.get(q - 1));
 					return value;
 				}
 			})
@@ -327,8 +330,7 @@ public class DataStreamTest {
 	public void testFwSideInputs() throws Exception {
 		// set up the execution environment
 		try {
-			UserGroupInformation ugi
-				= UserGroupInformation.createRemoteUser("hdfs");
+			UserGroupInformation ugi = UserGroupInformation.createRemoteUser("hdfs");
 
 			ugi.doAs(new PrivilegedExceptionAction<Void>() {
 
@@ -343,10 +345,10 @@ public class DataStreamTest {
 					DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
 
 					//DataStream<Integer> sideSource1 = env.readTextFile("");
-					DataStream<String> sideSource = env.readTextFile("hdfs://hdfs@vm-cluster-node1:8020/user/ventura/proteus/batch.dataset");
+					DataStream<String> sideSource = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/batch.dataset");
 
 					//	final SideInput<Integer> sideInput1 = new ForwardedSideInput<>(sideSource1);
-					final SideInput<String> sideInput = new ForwardedSideInput<>(sideSource);
+					final SideInput<String> sideInput = env.newForwardedSideInput(sideSource);
 
 					source1
 						.map(new RichMapFunction<String, String>() {
