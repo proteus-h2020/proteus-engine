@@ -171,7 +171,9 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
 		for (SideInput<?> sideInput : bindedSideInputs) {
 			StreamTransformation<?> sideTransformation;
 			if (sideInput instanceof BroadcastedSideInput) {
-				sideTransformation = ((BroadcastedSideInput) sideInput).stream().broadcast().getTransformation();
+				sideTransformation = ((BroadcastedSideInput<?>) sideInput).stream().broadcast().getTransformation();
+			} else if (sideInput instanceof ForwardedSideInput) {
+				sideTransformation = ((ForwardedSideInput<?>) sideInput).stream().forward().getTransformation();
 			} else {
 				throw new UnsupportedOperationException("unknown side input type");
 			}

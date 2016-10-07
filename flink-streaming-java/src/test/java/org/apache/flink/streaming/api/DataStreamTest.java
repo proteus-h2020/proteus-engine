@@ -234,7 +234,7 @@ public class DataStreamTest {
 			private int value = 0;
 			@Override
 			public void run(SourceContext<Integer> ctx) throws Exception {
-				while (counter < 8200) {
+				while (counter < 1000) {
 					ctx.collect(value++);
 					counter++;
 					Thread.sleep(10);
@@ -273,7 +273,7 @@ public class DataStreamTest {
 					return counter += 10L;
 				}
 			})
-			.timeWindowAll(Time.of(3000, TimeUnit.MILLISECONDS))
+			.timeWindowAll(Time.of(300, TimeUnit.MILLISECONDS))
 			.apply(new RichAllWindowFunction<Integer, Void, TimeWindow>() {
 				@Override
 				public void apply(TimeWindow window, Iterable<Integer> values, Collector<Void> out) throws Exception {
