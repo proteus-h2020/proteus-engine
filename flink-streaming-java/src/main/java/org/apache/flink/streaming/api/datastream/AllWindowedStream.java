@@ -23,6 +23,7 @@ import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.functions.FoldFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.RichFunction;
+import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.common.state.FoldingStateDescriptor;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
@@ -51,6 +52,9 @@ import org.apache.flink.streaming.runtime.operators.windowing.functions.Internal
 import org.apache.flink.streaming.runtime.operators.windowing.functions.InternalSingleValueAllWindowFunction;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecordSerializer;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A {@code AllWindowedStream} represents a data stream where the stream of
@@ -91,12 +95,16 @@ public class AllWindowedStream<T, W extends Window> {
 	/** The user-specified allowed lateness. */
 	private long allowedLateness = 0L;
 
+	/** The registered side inputs */
+	private Set<SideInput<?>> bindedSideInputs;
+
 	@PublicEvolving
 	public AllWindowedStream(DataStream<T> input,
 			WindowAssigner<? super T, W> windowAssigner) {
 		this.input = input.keyBy(new NullByteKeySelector<T>());
 		this.windowAssigner = windowAssigner;
 		this.trigger = windowAssigner.getDefaultTrigger(input.getExecutionEnvironment());
+		this.bindedSideInputs = new HashSet<>();
 	}
 
 	/**
@@ -302,6 +310,8 @@ public class AllWindowedStream<T, W extends Window> {
 					allowedLateness);
 		}
 
+		injectSideInputs();
+
 		return input.transform(opName, resultType, operator).forceNonParallel();
 	}
 
@@ -390,6 +400,8 @@ public class AllWindowedStream<T, W extends Window> {
 					trigger,
 					allowedLateness);
 		}
+
+		injectSideInputs();
 
 		return input.transform(opName, resultType, operator).forceNonParallel();
 	}
@@ -483,6 +495,8 @@ public class AllWindowedStream<T, W extends Window> {
 					trigger,
 					allowedLateness);
 		}
+
+		injectSideInputs();
 
 		return input.transform(opName, resultType, operator).forceNonParallel();
 	}
@@ -683,6 +697,31 @@ public class AllWindowedStream<T, W extends Window> {
 
 	private SingleOutputStreamOperator<T> aggregate(AggregationFunction<T> aggregator) {
 		return reduce(aggregator);
+	}
+
+	// ------------------------------------------------------------------------
+	//  Side Input Handling
+	// ------------------------------------------------------------------------
+
+	/**
+	 * Adds a side input to the current data steam
+	 * @param sideInput the side input holder
+	 * @param <TYPE> the inner type of the data stream
+	 * @return the current data stream that owns the side input
+	 */
+	@PublicEvolving
+	@SuppressWarnings("unchecked")
+	public <TYPE, SELF extends AllWindowedStream<T, W>> SELF withSideInput(SideInput<TYPE> sideInput) {
+		bindedSideInputs.add(sideInput);
+		return (SELF) this;
+	}
+
+	@PublicEvolving
+	private void injectSideInputs() {
+		// inject side input
+		for (SideInput<?> sideInput : bindedSideInputs) {
+			input.withSideInput(sideInput);
+		}
 	}
 
 	// ------------------------------------------------------------------------

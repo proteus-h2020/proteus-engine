@@ -22,6 +22,7 @@ import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.functions.FoldFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
+import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.common.state.FoldingStateDescriptor;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
@@ -43,6 +44,7 @@ import org.apache.flink.streaming.api.operators.StreamGroupedFold;
 import org.apache.flink.streaming.api.operators.StreamGroupedReduce;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
 import org.apache.flink.streaming.api.transformations.PartitionTransformation;
+import org.apache.flink.streaming.api.transformations.StreamTransformation;
 import org.apache.flink.streaming.api.windowing.assigners.GlobalWindows;
 import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.assigners.SlidingProcessingTimeWindows;
@@ -59,6 +61,8 @@ import org.apache.flink.streaming.api.windowing.windows.Window;
 import org.apache.flink.streaming.runtime.partitioner.KeyGroupStreamPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -82,6 +86,9 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
 
 	/** The type of the key by which the stream is partitioned */
 	private final TypeInformation<KEY> keyType;
+
+	/** The registered side inputs */
+	private Set<SideInput<?>> bindedSideInputs;
 	
 	/**
 	 * Creates a new {@link KeyedStream} using the given {@link KeySelector}
@@ -114,6 +121,7 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
 					keySelector, KeyGroupRangeAssignment.DEFAULT_MAX_PARALLELISM)));
 		this.keySelector = keySelector;
 		this.keyType = keyType;
+		this.bindedSideInputs = new HashSet<>();
 	}
 	
 	// ------------------------------------------------------------------------
@@ -152,12 +160,23 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
 	public <R> SingleOutputStreamOperator<R> transform(String operatorName,
 			TypeInformation<R> outTypeInfo, OneInputStreamOperator<T, R> operator) {
 
-		SingleOutputStreamOperator<R> returnStream = super.transform(operatorName, outTypeInfo,operator);
+		SingleOutputStreamOperator<R> returnStream = super.transform(operatorName, outTypeInfo, operator);
 
 		// inject the key selector and key type
 		OneInputTransformation<T, R> transform = (OneInputTransformation<T, R>) returnStream.getTransformation();
 		transform.setStateKeySelector(keySelector);
 		transform.setStateKeyType(keyType);
+
+		// inject side inputs
+		for (SideInput<?> sideInput : bindedSideInputs) {
+			StreamTransformation<?> sideTransformation;
+			if (sideInput instanceof BroadcastedSideInput) {
+				sideTransformation = ((BroadcastedSideInput) sideInput).stream().broadcast().getTransformation();
+			} else {
+				throw new UnsupportedOperationException("unknown side input type");
+			}
+			transform.registerSideInput(sideInput.id(), sideTransformation);
+		}
 		
 		return returnStream;
 	}
@@ -640,5 +659,23 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
 				stateDescriptor.getSerializer(),
 				getKeyType().createSerializer(getExecutionConfig()));
 	}
+
+	// ------------------------------------------------------------------------
+	//  Side Input Handling
+	// ------------------------------------------------------------------------
+
+	/**
+	 * Adds a side input to the current data steam
+	 * @param sideInput the side input holder
+	 * @param <TYPE> the inner type of the data stream
+	 * @return the current data stream that owns the side input
+	 */
+	@PublicEvolving
+	@SuppressWarnings("unchecked")
+	public <TYPE, SELF extends DataStream<T>> SELF withSideInput(SideInput<TYPE> sideInput) {
+		bindedSideInputs.add(sideInput);
+		return (SELF) this;
+	}
+
 
 }
