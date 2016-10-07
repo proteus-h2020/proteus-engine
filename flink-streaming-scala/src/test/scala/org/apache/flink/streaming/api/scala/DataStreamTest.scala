@@ -22,7 +22,9 @@ import java.lang
 
 import org.apache.flink.api.common.functions._
 import org.apache.flink.api.java.typeutils.TypeExtractor
+import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.collector.selector.OutputSelector
+import org.apache.flink.streaming.api.datastream.BroadcastedSideInput
 import org.apache.flink.streaming.api.functions.co.CoMapFunction
 import org.apache.flink.streaming.api.graph.{StreamEdge, StreamGraph}
 import org.apache.flink.streaming.api.operators.{AbstractUdfStreamOperator, StreamOperator}
@@ -85,6 +87,9 @@ class DataStreamTest extends StreamingMultipleProgramsTestBase {
     assert(plan contains "testCoFlatMap")
     assert(plan contains "testWindowFold")
   }
+
+
+
 
   /**
    * Tests that [[DataStream.keyBy]] and [[DataStream.partitionCustom]] result in
@@ -313,6 +318,36 @@ class DataStreamTest extends StreamingMultipleProgramsTestBase {
     assert(TypeExtractor.getForClass(classOf[Int]) == flatten.getType())
 
     // TODO check for custom case class
+  }
+
+
+  @Test
+  def testSideInput(): Unit = {
+    // set up the execution environment
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    env.setParallelism(2)
+    env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
+    env.getCheckpointConfig.setCheckpointInterval(5000)
+
+    val source1: DataStream[String] = env.fromElements("Hello", "There", "What", "up")
+
+    val sideSource1: DataStream[Int] = env.fromElements(1, 2, 3, 4, 5)
+    val sideSource2: DataStream[String] = env.fromElements("A", "B", "C")
+
+    val sideInput1 = env.newBroadcastedSideInput(sideSource1)
+    val sideInput2 = env.newBroadcastedSideInput(sideSource2)
+
+    source1.map(new RichMapFunction[String, String]() {
+      @throws[Exception]
+      def map(value: String): String = {
+        val side = getRuntimeContext.getSideInput(sideInput1)
+        System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext.getTaskNameWithSubtasks + " with " + side.get(3))
+        value
+      }
+    }).withSideInput(sideInput1).withSideInput(sideInput2)
+
+
+    env.execute("side inputs")
   }
 
   @Test def operatorTest() {

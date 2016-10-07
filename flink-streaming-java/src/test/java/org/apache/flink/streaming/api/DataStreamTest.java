@@ -34,6 +34,7 @@ import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSink;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.ForwardedSideInput;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.datastream.SplitStream;
@@ -62,9 +63,11 @@ import org.apache.flink.streaming.runtime.partitioner.RebalancePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.ShufflePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
 import org.apache.flink.util.Collector;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -209,10 +212,7 @@ public class DataStreamTest {
 
 	@Test
 	public void testSideInputs() throws Exception {
-
 		// set up the execution environment
-
-
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setParallelism(2);
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
@@ -227,53 +227,76 @@ public class DataStreamTest {
 			integers.add(i);
 		}
 
-		DataStream<Integer> sideSource1 = env.fromCollection(integers).assignTimestampsAndWatermarks(new AssignerWithPunctuatedWatermarks<Integer>() {
-
-			private long counter = 0;
-
-			@Nullable
-			@Override
-			public Watermark checkAndGetNextWatermark(Integer lastElement, long extractedTimestamp) {
-				return new Watermark(counter - 1);
-			}
-
-			@Override
-			public long extractTimestamp(Integer element, long previousElementTimestamp) {
-				return counter++;
-			}
-		});
-
-
+		DataStream<Integer> sideSource1 = env.fromCollection(integers);
 		DataStream<String> sideSource2 = env.fromElements("A", "B", "C");
 
-		final SideInput<Integer> sideInput1 = new BroadcastedSideInput<>(sideSource1);
-		final SideInput<String> sideInput2 = new BroadcastedSideInput<>(sideSource2);
+		final SideInput<Integer> sideInput1 = env.newBroadcastedSideInput(sideSource1);
+		final SideInput<String> sideInput2 = env.newBroadcastedSideInput(sideSource2);
 
 		source1
 			.map(new RichMapFunction<String, String>() {
 				@Override
 				public String map(String value) throws Exception {
-
 					ArrayList<Integer> side = (ArrayList<Integer>) getRuntimeContext().getSideInput(sideInput1);
-
-
-
 					System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side.get(999999));
-
-
-
 					return value;
 				}
 			})
 			.withSideInput(sideInput1)
 			.withSideInput(sideInput2)
 		;
-
-
 		env.execute("side inputs");
-
-
 	}
+
+
+	@Test
+	public void testFwSideInputs() throws Exception {
+		// set up the execution environment
+		try {
+			UserGroupInformation ugi
+				= UserGroupInformation.createRemoteUser("hdfs");
+
+			ugi.doAs(new PrivilegedExceptionAction<Void>() {
+
+				public Void run() throws Exception {
+
+					final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+					env.setParallelism(2);
+					env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+					env.getCheckpointConfig().setCheckpointInterval(5000);
+					//env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
+
+					DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
+
+					//DataStream<Integer> sideSource1 = env.readTextFile("");
+					DataStream<String> sideSource = env.readTextFile("hdfs://hdfs@vm-cluster-node1:8020/user/ventura/proteus/batch.dataset");
+
+					//	final SideInput<Integer> sideInput1 = new ForwardedSideInput<>(sideSource1);
+					final SideInput<String> sideInput = new ForwardedSideInput<>(sideSource);
+
+					source1
+						.map(new RichMapFunction<String, String>() {
+							@Override
+							public String map(String value) throws Exception {
+								ArrayList<String> side = (ArrayList<String>) getRuntimeContext().getSideInput(sideInput);
+								System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side);
+								return value;
+							}
+						})
+						.withSideInput(sideInput)
+					;
+					env.execute("side inputs");
+
+
+					return null;
+				}
+			});
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+
 	/**
 	 * Tests {@link SingleOutputStreamOperator#name(String)} functionality.
 	 *

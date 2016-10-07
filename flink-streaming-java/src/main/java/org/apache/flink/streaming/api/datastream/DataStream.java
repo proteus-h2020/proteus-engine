@@ -349,11 +349,14 @@ public class DataStream<T> {
 	 * @return the current data stream that owns the side input
 	 */
 	@PublicEvolving
-	public <R extends Serializable> DataStream<T> withSideInput(SideInput<R> sideInput) {
+	public <R> DataStream<T> withSideInput(SideInput<R> sideInput) {
 
 		if (sideInput instanceof BroadcastedSideInput) {
 			DataStream<R> oth = ((BroadcastedSideInput<R>) sideInput).stream();
 			transformation.registerSideInput(sideInput.id(), oth.broadcast().getTransformation());
+		} else if (sideInput instanceof ForwardedSideInput) {
+			DataStream<R> oth = ((ForwardedSideInput<R>) sideInput).stream();
+			transformation.registerSideInput(sideInput.id(), oth.forward().getTransformation());
 		} else {
 			throw new UnsupportedOperationException();
 		}

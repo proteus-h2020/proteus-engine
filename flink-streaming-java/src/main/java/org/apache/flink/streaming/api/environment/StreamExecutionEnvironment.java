@@ -26,6 +26,7 @@ import org.apache.flink.api.common.InvalidProgramException;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.functions.StoppableFunction;
+import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.common.io.FileInputFormat;
 import org.apache.flink.api.common.io.FilePathFilter;
 import org.apache.flink.api.common.io.InputFormat;
@@ -49,6 +50,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.state.AbstractStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.TimeCharacteristic;
+import org.apache.flink.streaming.api.datastream.BroadcastedSideInput;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -1741,5 +1743,9 @@ public abstract class StreamExecutionEnvironment {
 	
 	protected static void resetContextEnvironment() {
 		contextEnvironmentFactory = null;
+	}
+
+	public <TYPE> SideInput<TYPE> newBroadcastedSideInput(DataStream<TYPE> sideInput) {
+		return new BroadcastedSideInput<>(sideInput);
 	}
 }

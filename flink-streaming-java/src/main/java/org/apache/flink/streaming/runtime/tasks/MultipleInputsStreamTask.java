@@ -136,7 +136,6 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 			for (i = 1; i < wrappers.length; i++) {
 				final UUID id = sideInfos.get(i).getId();
 				final int typeId = sideInfos.get(i).getTypeId();
-				//final TypeInformation<?> info = sideInfos.get(i).getType();
 				sideInputsCollector.put(id, new ArrayList<>());
 				wrappers[i] = new OperatorWrapper() {
 
