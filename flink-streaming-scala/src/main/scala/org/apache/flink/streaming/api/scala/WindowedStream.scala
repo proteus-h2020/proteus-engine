@@ -18,7 +18,8 @@
 
 package org.apache.flink.streaming.api.scala
 
-import org.apache.flink.annotation.{PublicEvolving, Public}
+import org.apache.flink.annotation.{Public, PublicEvolving}
+import org.apache.flink.api.common.functions.util.SideInput
 import org.apache.flink.api.common.functions.{FoldFunction, ReduceFunction}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.datastream.{WindowedStream => JavaWStream}
@@ -444,4 +445,21 @@ class WindowedStream[T, K, W <: Window](javaStream: JavaWStream[T, K, W]) {
    * Gets the output type.
    */
   private def getInputType(): TypeInformation[T] = javaStream.getInputType
+
+
+  // ------------------------------------------------------------------------
+  //  Side inputs handling
+  // ------------------------------------------------------------------------
+
+  /**
+    * Adds a side input to the current data steam
+    * @param sideInput the side input holder
+    * @tparam R the inner type of the data stream
+    * @return the current data stream that owns the side input
+    */
+  @PublicEvolving
+  def withSideInput[R, SELF <: WindowedStream[T, K, W]](sideInput: SideInput[R]): SELF = {
+    javaStream.withSideInput(sideInput)
+    this.asInstanceOf[SELF]
+  }
 }

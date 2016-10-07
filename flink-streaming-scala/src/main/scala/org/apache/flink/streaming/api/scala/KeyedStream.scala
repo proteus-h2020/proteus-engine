@@ -20,10 +20,11 @@ package org.apache.flink.streaming.api.scala
 
 import org.apache.flink.annotation.{Internal, Public, PublicEvolving}
 import org.apache.flink.api.common.functions._
+import org.apache.flink.api.common.functions.util.SideInput
 import org.apache.flink.api.common.state.{FoldingStateDescriptor, ListStateDescriptor, ReducingStateDescriptor, ValueStateDescriptor}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.common.typeutils.TypeSerializer
-import org.apache.flink.streaming.api.datastream.{DataStream => JavaStream, KeyedStream => KeyedJavaStream, QueryableStateStream, WindowedStream => WindowedJavaStream}
+import org.apache.flink.streaming.api.datastream.{QueryableStateStream, DataStream => JavaStream, KeyedStream => KeyedJavaStream, WindowedStream => WindowedJavaStream}
 import org.apache.flink.streaming.api.functions.aggregation.AggregationFunction.AggregationType
 import org.apache.flink.streaming.api.functions.aggregation.{ComparableAggregator, SumAggregator}
 import org.apache.flink.streaming.api.functions.query.{QueryableAppendingStateOperator, QueryableValueStateOperator}
@@ -482,6 +483,18 @@ class KeyedStream[T, K](javaStream: KeyedJavaStream[T, K]) extends DataStream[T]
       queryableStateName,
       stateDescriptor.getSerializer,
       getKeyType.createSerializer(executionConfig))
+  }
+
+  /**
+    * Adds a side input to the current data steam
+    * @param sideInput the side input holder
+    * @tparam R the inner type of the data stream
+    * @return the current data stream that owns the side input
+    */
+  @PublicEvolving
+  def withSideInput[R, SELF <: KeyedStream[T, K]](sideInput: SideInput[R]): SELF = {
+    javaStream.withSideInput(sideInput)
+    this.asInstanceOf[SELF]
   }
   
 }

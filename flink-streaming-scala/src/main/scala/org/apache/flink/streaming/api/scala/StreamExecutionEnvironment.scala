@@ -27,7 +27,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.typeutils.runtime.kryo.KryoSerializer
 import org.apache.flink.api.scala.ClosureCleaner
 import org.apache.flink.runtime.state.AbstractStateBackend
-import org.apache.flink.streaming.api.datastream.BroadcastedSideInput
+import org.apache.flink.streaming.api.datastream.{BroadcastedSideInput, ForwardedSideInput}
 import org.apache.flink.streaming.api.environment.{StreamExecutionEnvironment => JavaEnv}
 import org.apache.flink.streaming.api.functions.source._
 import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
@@ -413,10 +413,17 @@ class StreamExecutionEnvironment(javaEnv: JavaEnv) {
   }
 
   /**
-    *
+    * creates a new broadcasted side input
     */
   def newBroadcastedSideInput[T: TypeInformation](ds: DataStream[T]) : SideInput[T] = {
     new BroadcastedSideInput[T](ds.javaStream)
+  }
+
+  /**
+    * creates a new forwarded side input
+    */
+  def newForwardedSideInput[T: TypeInformation](ds: DataStream[T]) : SideInput[T] = {
+    new ForwardedSideInput[T](ds.javaStream)
   }
 
   /**
