@@ -27,6 +27,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.runtime.accumulators.AccumulatorRegistry;
 import org.apache.flink.runtime.broadcast.BroadcastVariableManager;
+import org.apache.flink.runtime.checkpoint.CheckpointMetaData;
 import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
@@ -310,18 +311,12 @@ public class StreamMockEnvironment implements Environment {
 	}
 
 	@Override
-	public void acknowledgeCheckpoint(
-			long checkpointId,
-			long synchronousDurationMillis, long asynchronousDurationMillis,
-			long bytesBufferedInAlignment, long alignmentDurationNanos) {
+	public void acknowledgeCheckpoint(CheckpointMetaData checkpointMetaData) {
 	}
 
 	@Override
 	public void acknowledgeCheckpoint(
-			long checkpointId,
-			CheckpointStateHandles checkpointStateHandles,
-			long synchronousDurationMillis, long asynchronousDurationMillis,
-			long bytesBufferedInAlignment, long alignmentDurationNanos) {
+			CheckpointMetaData checkpointMetaData, CheckpointStateHandles checkpointStateHandles) {
 	}
 
 	@Override

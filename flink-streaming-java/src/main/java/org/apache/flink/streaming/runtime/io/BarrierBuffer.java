@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.runtime.io;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.checkpoint.CheckpointMetaData;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.io.network.api.EndOfPartitionEvent;
@@ -218,9 +219,13 @@ public class BarrierBuffer implements CheckpointBarrierHandler {
 			releaseBlocks();
 
 			if (toNotifyOnCheckpoint != null) {
-				toNotifyOnCheckpoint.triggerCheckpointOnBarrier(
-						receivedBarrier.getId(), receivedBarrier.getTimestamp(),
-						bufferSpiller.getBytesWritten(), latestAlignmentDurationNanos);
+				CheckpointMetaData checkpointMetaData =
+						new CheckpointMetaData(receivedBarrier.getId(), receivedBarrier.getTimestamp());
+				checkpointMetaData.
+						setBytesBufferedInAlignment(bufferSpiller.getBytesWritten()).
+						setAlignmentDurationNanos(latestAlignmentDurationNanos);
+
+				toNotifyOnCheckpoint.triggerCheckpointOnBarrier(checkpointMetaData);
 			}
 		}
 	}
