@@ -329,45 +329,34 @@ public class DataStreamTest {
 	@Test
 	public void testFwSideInputs() throws Exception {
 		// set up the execution environment
-		try {
-			UserGroupInformation ugi = UserGroupInformation.createRemoteUser("hdfs");
 
-			ugi.doAs(new PrivilegedExceptionAction<Void>() {
 
-				public Void run() throws Exception {
+		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(2);
+		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+		env.getCheckpointConfig().setCheckpointInterval(5000);
+		//env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
 
-					final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-					env.setParallelism(2);
-					env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-					env.getCheckpointConfig().setCheckpointInterval(5000);
-					//env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
+		DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
 
-					DataStream<String> source1 = env.fromElements("Hello", "There", "What", "up");
+		//DataStream<Integer> sideSource1 = env.readTextFile("");
+		DataStream<String> sideSource = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/batch.dataset");
 
-					//DataStream<Integer> sideSource1 = env.readTextFile("");
-					DataStream<String> sideSource = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/batch.dataset");
+		//	final SideInput<Integer> sideInput1 = new ForwardedSideInput<>(sideSource1);
+		final SideInput<String> sideInput = env.newForwardedSideInput(sideSource);
 
-					//	final SideInput<Integer> sideInput1 = new ForwardedSideInput<>(sideSource1);
-					final SideInput<String> sideInput = env.newForwardedSideInput(sideSource);
-
-					source1
-						.map(new RichMapFunction<String, String>() {
-							@Override
-							public String map(String value) throws Exception {
-								ArrayList<String> side = (ArrayList<String>) getRuntimeContext().getSideInput(sideInput);
-								System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side);
-								return value;
-							}
-						})
-						.withSideInput(sideInput)
-					;
-					env.execute("side inputs");
-					return null;
+		source1
+			.map(new RichMapFunction<String, String>() {
+				@Override
+				public String map(String value) throws Exception {
+					ArrayList<String> side = (ArrayList<String>) getRuntimeContext().getSideInput(sideInput);
+					System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext().getTaskNameWithSubtasks() + " with " + side);
+					return value;
 				}
-			});
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			})
+			.withSideInput(sideInput)
+		;
+		env.execute("side inputs");
 	}
 
 

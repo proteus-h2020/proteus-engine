@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.examples.ml;
 
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -69,7 +70,11 @@ public class IncrementalHybridLearningSkeleton {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-		DataStream<Integer> sideSource = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/batch.dataset").map(new MapFunction<String, Integer>() {
+		String inputFile = params.has("input") ? params.get("input") :
+			"hdfs://vm-cluster-node1:8020/user/ventura/proteus/batch.dataset";
+
+		DataStream<Integer> sideSource = env.readTextFile(inputFile)
+			.map(new MapFunction<String, Integer>() {
 			@Override
 			public Integer map(String value) throws Exception {
 				return Integer.parseInt(value);
@@ -89,7 +94,8 @@ public class IncrementalHybridLearningSkeleton {
 			.withSideInput(side);
 
 		// use partial model for newData
-		DataStream<Integer> prediction = newData.connect(model).map(new Predictor());
+		DataStream<Integer> prediction = newData.map(new Predictor())
+			.withSideInput(env.newBroadcastedSideInput(model));
 
 		// emit result
 		if (params.has("output")) {
@@ -208,29 +214,14 @@ public class IncrementalHybridLearningSkeleton {
 	 * for every model update.
 	 * </p>
 	 */
-	public static class Predictor implements CoMapFunction<Integer, Double[], Integer> {
+	public static class Predictor extends RichMapFunction<Integer, Integer> {
 		private static final long serialVersionUID = 1L;
 
-		Double[] batchModel = null;
-		Double[] partialModel = null;
 
 		@Override
-		public Integer map1(Integer value) {
+		public Integer map(Integer value) {
 			// Return newData
 			return predict(value);
-		}
-
-		@Override
-		public Integer map2(Double[] value) {
-			// Update model
-			partialModel = value;
-			batchModel = getBatchModel();
-			return 1;
-		}
-
-		// pulls model built with batch-job on the old training data
-		protected Double[] getBatchModel() {
-			return new Double[]{0.};
 		}
 
 		// performs newData using the two models
