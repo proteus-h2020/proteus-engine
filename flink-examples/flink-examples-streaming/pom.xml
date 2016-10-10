@@ -52,6 +52,12 @@ under the License.
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-ml_2.10</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-examples-batch_2.10</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -98,7 +104,7 @@ under the License.
 					<configLocation>${project.basedir}/../../tools/maven/scalastyle-config.xml</configLocation>
 				</configuration>
 			</plugin>
-			
+
 			<!-- get default data from flink-examples-batch package -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -153,7 +159,7 @@ under the License.
 							<goal>test-jar</goal>
 						</goals>
 					</execution>
-					
+
 					<!-- Iteration -->
 					<execution>
 						<id>Iteration</id>
@@ -193,7 +199,7 @@ under the License.
 							</archive>
 
 							<includes>
-								<include>org/apache/flink/streaming/examples/ml/*.class</include>			
+								<include>org/apache/flink/streaming/examples/ml/*.class</include>
 							</includes>
 						</configuration>
 					</execution>
@@ -264,7 +270,7 @@ under the License.
 							<includes>
 								<include>org/apache/flink/streaming/examples/wordcount/WordCount.class</include>
 								<include>org/apache/flink/streaming/examples/wordcount/WordCount$*.class</include>
-								<include>org/apache/flink/examples/java/wordcount/util/WordCountData.class</include>				
+								<include>org/apache/flink/examples/java/wordcount/util/WordCountData.class</include>
 							</includes>
 						</configuration>
 					</execution>
@@ -357,7 +363,7 @@ under the License.
 							<goal>compile</goal>
 						</goals>
 					</execution>
- 
+
 					<!-- Run scala compiler in the process-test-resources phase, so that dependencies on
 						 scala classes can be resolved later in the (Java) test-compile phase -->
 					<execution>
@@ -375,7 +381,7 @@ under the License.
 					</jvmArgs>
 				</configuration>
 			</plugin>
-			
+
 			<!-- Eclipse Integration -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -542,7 +548,7 @@ under the License.
 			</plugin>
 
 		</plugins>
-		
+
 		<pluginManagement>
 			<plugins>
 				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->

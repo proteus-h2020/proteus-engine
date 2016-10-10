@@ -492,9 +492,9 @@ class KeyedStream[T, K](javaStream: KeyedJavaStream[T, K]) extends DataStream[T]
     * @return the current data stream that owns the side input
     */
   @PublicEvolving
-  def withSideInput[R, SELF <: KeyedStream[T, K]](sideInput: SideInput[R]): SELF = {
+  override def withSideInput[R](sideInput: SideInput[R]): this.type = {
     javaStream.withSideInput(sideInput)
-    this.asInstanceOf[SELF]
+    this
   }
   
 }

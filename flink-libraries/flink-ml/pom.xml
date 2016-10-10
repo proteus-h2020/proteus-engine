@@ -45,6 +45,13 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-streaming-scala_2.10</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
 			<groupId>org.scalanlp</groupId>
 			<artifactId>breeze_${scala.binary.version}</artifactId>
 			<version>0.12</version>

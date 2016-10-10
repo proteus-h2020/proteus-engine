@@ -18,7 +18,7 @@
 
 package org.apache.flink.streaming.api.scala
 
-import java.lang
+import java.{lang, util}
 
 import org.apache.flink.api.common.functions._
 import org.apache.flink.api.java.typeutils.TypeExtractor
@@ -341,7 +341,7 @@ class DataStreamTest extends StreamingMultipleProgramsTestBase {
       @throws[Exception]
       def map(value: String): String = {
         val side = getRuntimeContext.getSideInput(sideInput1)
-        System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext.getTaskNameWithSubtasks + " with " + side.get(3))
+        System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext.getTaskNameWithSubtasks + " with " + side.asInstanceOf[util.ArrayList[Integer]].get(3))
         value
       }
     }).withSideInput(sideInput1).withSideInput(sideInput2)

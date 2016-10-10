@@ -456,8 +456,8 @@ class AllWindowedStream[T, W <: Window](javaStream: JavaAllWStream[T, W]) {
     * @return the current data stream that owns the side input
     */
   @PublicEvolving
-  def withSideInput[R, SELF <: AllWindowedStream[T, W]](sideInput: SideInput[R]): SELF = {
+  def withSideInput[R](sideInput: SideInput[R]): this.type = {
     javaStream.withSideInput(sideInput)
-    this.asInstanceOf[SELF]
+    this
   }
 }

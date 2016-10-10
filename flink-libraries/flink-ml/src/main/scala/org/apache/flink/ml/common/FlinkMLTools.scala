@@ -25,6 +25,7 @@ import org.apache.flink.api.java.io.{TypeSerializerInputFormat, TypeSerializerOu
 import org.apache.flink.api.scala._
 import org.apache.flink.core.fs.FileSystem.WriteMode
 import org.apache.flink.core.fs.Path
+import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 
 import scala.reflect.ClassTag
 
@@ -41,6 +42,32 @@ import scala.reflect.ClassTag
   *
   */
 object FlinkMLTools {
+  def registerFlinkMLTypes(env: StreamExecutionEnvironment) = {
+    // Vector types
+    env.registerType(classOf[org.apache.flink.ml.math.DenseVector])
+    env.registerType(classOf[org.apache.flink.ml.math.SparseVector])
+
+    // Matrix types
+    env.registerType(classOf[org.apache.flink.ml.math.DenseMatrix])
+    env.registerType(classOf[org.apache.flink.ml.math.SparseMatrix])
+
+    // Breeze Vector types
+    env.registerType(classOf[breeze.linalg.DenseVector[_]])
+    env.registerType(classOf[breeze.linalg.SparseVector[_]])
+
+    // Breeze specialized types
+    env.registerType(breeze.linalg.DenseVector.zeros[Double](0).getClass)
+    env.registerType(breeze.linalg.SparseVector.zeros[Double](0).getClass)
+
+    // Breeze Matrix types
+    env.registerType(classOf[breeze.linalg.DenseMatrix[Double]])
+    env.registerType(classOf[breeze.linalg.CSCMatrix[Double]])
+
+    // Breeze specialized types
+    env.registerType(breeze.linalg.DenseMatrix.zeros[Double](0, 0).getClass)
+    env.registerType(breeze.linalg.CSCMatrix.zeros[Double](0, 0).getClass)
+  }
+
 
   /** Registers the different FlinkML related types for Kryo serialization
     *

@@ -354,5 +354,5 @@ public interface RuntimeContext {
 	 * @return
 	 */
 	@PublicEvolving
-	<T> List<T> getSideInput(SideInput<T> sideInput);
+	<T> Iterable<T> getSideInput(SideInput<T> sideInput);
 }

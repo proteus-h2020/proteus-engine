@@ -25,16 +25,13 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.AssignerWithPunctuatedWatermarks;
-import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
-import org.apache.flink.streaming.api.functions.windowing.AllWindowFunction;
 import org.apache.flink.streaming.api.functions.windowing.RichAllWindowFunction;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -196,7 +193,7 @@ public class IncrementalHybridLearningSkeleton {
 		}
 
 
-		protected Double[] buildPartialModel(Iterable<Integer> values, List<Integer> side) {
+		protected Double[] buildPartialModel(Iterable<Integer> values, Iterable<Integer> side) {
 			return new Double[]{1.};
 		}
 

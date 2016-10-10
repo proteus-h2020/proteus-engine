@@ -331,7 +331,7 @@ class DataStream[T](stream: JavaStream[T]) {
     * @return the current data stream that owns the side input
     */
   @PublicEvolving
-  def withSideInput[R](sideInput: SideInput[R]): DataStream[T] = {
+  def withSideInput[R](sideInput: SideInput[R]): this.type = {
     javaStream.withSideInput(sideInput)
     this
   }
