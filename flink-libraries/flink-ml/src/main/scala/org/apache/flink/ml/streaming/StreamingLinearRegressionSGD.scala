@@ -18,7 +18,7 @@ class StreamingLinearRegressionSGD (
  private var regularizationConstant: Double
  ) extends Serializable {
 
-  def this() = this(0.1, 50, 0.0)
+  def this() = this(0.1, 10, 0.0)
 
   var model: Option[WeightVector] = None
 
