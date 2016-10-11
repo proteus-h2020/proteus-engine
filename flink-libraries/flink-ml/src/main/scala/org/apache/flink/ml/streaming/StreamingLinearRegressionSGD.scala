@@ -1,24 +1,27 @@
 package org.apache.flink.ml.streaming
 
+import breeze.linalg.norm
+import org.apache.flink.api.common.functions.RichMapFunction
 import org.apache.flink.api.common.functions.util.SideInput
-import org.apache.flink.api.java.tuple.Tuple
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.ml.common._
-import org.apache.flink.ml.math.{BLAS, DenseVector, SparseVector, Vector}
+import org.apache.flink.ml.math.{BLAS, Breeze, DenseVector, SparseVector, Vector}
 import org.apache.flink.ml.optimization._
 import org.apache.flink.streaming.api.scala._
-import org.apache.flink.streaming.api.scala.function.RichWindowFunction
+import org.apache.flink.streaming.api.scala.function.RichAllWindowFunction
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow
-import org.apache.flink.util.Collector
+import org.apache.flink.util.{Collector, XORShiftRandom}
 
 import scala.collection.JavaConverters._
 
 class StreamingLinearRegressionSGD (
- private var stepSize: Double,
- private var numEpochs: Int,
- private var regularizationConstant: Double
- ) extends Serializable {
+  private var stepSize: Double,
+  private var numEpochs: Int,
+  private var regularizationConstant: Double,
+  private var tol: Double
+  ) extends Serializable {
 
-  def this() = this(0.1, 10, 0.0)
+  def this() = this(0.1, 100, 0.0, 0.001)
 
   var model: Option[WeightVector] = None
 
@@ -27,26 +30,52 @@ class StreamingLinearRegressionSGD (
     this
   }
 
-  def fit(input: WindowedStream[LabeledVector, Tuple, TimeWindow], historicalDataHandle: SideInput[LabeledVector]): Unit = {
-    input.withSideInput(historicalDataHandle).apply(new RichWindowFunction[LabeledVector, WeightVector, Tuple, TimeWindow] {
+  def fit(input: AllWindowedStream[LabeledVector, TimeWindow], historicalDataHandle: SideInput[LabeledVector]): DataStream[WeightVector] = {
+    input.withSideInput(historicalDataHandle).apply(new RichAllWindowFunction[LabeledVector, WeightVector, TimeWindow] {
 
-      override def apply(key: Tuple, window: TimeWindow, input: Iterable[LabeledVector], out: Collector[WeightVector]): Unit = {
+      var currModel: WeightVector = null
+      var wcnt = 0
+
+      override def open(parameters: Configuration): Unit = {
+        super.open(parameters)
+        if (model.isEmpty) {
+          throw new RuntimeException("model weights not initialized")
+        } else {
+          currModel = model.get
+        }
+      }
+
+      def createRegParam(regularizationConstant: Double, weights: Vector) = {
+        import Breeze._
+        val zeros = DenseVector.zeros(weights.size)
+        BLAS.axpy(regularizationConstant, weights, zeros)
+        // update the weights according to the learning rate
+        BLAS.axpy(0, zeros, weights)
+        val n = norm(weights.asBreeze, 2.0)
+        0.5 * regularizationConstant * n * n
+      }
+
+      override def apply(window: TimeWindow, input: Iterable[LabeledVector], out: Collector[WeightVector]): Unit = {
 
         val lossFunction = GenericLossFunction(SquaredLoss, LinearPrediction)
         val learningRateMethod = LearningRateMethod.Default
 
         val historicalData = getRuntimeContext.getSideInput(historicalDataHandle).asScala
-        val miniBatch: Iterable[LabeledVector] = historicalData ++ input
-        var currModel = model.get
+//        val miniBatch: Iterable[LabeledVector] = historicalData ++ input
+        var converged = false
+        var i = 1
 
-        var i = 0
-        while (i < numEpochs) {
+        var regParam = createRegParam(regularizationConstant, currModel.weights.copy)
+
+        while (!converged && i <= numEpochs) {
+          val r = new XORShiftRandom(91 + i)
+          val miniBatch: Iterable[LabeledVector] = historicalData.filter(_ => r.nextDouble <= 0.15) ++ input
           val gradientCount = miniBatch.map(sample => {
-            val gradient = lossFunction.gradient(sample, currModel)
-            (gradient, 1)
+            val (loss, gradient) = lossFunction.lossGradient(sample, currModel)
+            (gradient, loss, 1)
           }).reduce((left, right) => {
-            val (leftGradVector, leftCount) = left
-            val (rightGradVector, rightCount) = right
+            val (leftGradVector, leftLoss, leftCount) = left
+            val (rightGradVector, rightLoss, rightCount) = right
 
             val result = leftGradVector.weights match {
               case d: DenseVector => d
@@ -57,42 +86,59 @@ class StreamingLinearRegressionSGD (
             BLAS.axpy(1.0, rightGradVector.weights, result)
             val gradients = WeightVector(result, leftGradVector.intercept + rightGradVector.intercept)
 
-            (gradients , leftCount + rightCount)
+            (gradients, leftLoss + rightLoss, leftCount + rightCount)
           })
 
-          val (WeightVector(weights, intercept), count) = gradientCount
+          val (WeightVector(weights, intercept), loss, count) = gradientCount
 
-          BLAS.scal(1.0/count, weights)
+          if (count > 0) {
+            BLAS.scal(1.0/count.toDouble, weights)
 
-          val gradient = WeightVector(weights, intercept/count)
-          val effectiveLearningRate = learningRateMethod.calculateLearningRate(
-            stepSize,
-            i,
-            regularizationConstant)
+            val gradient = WeightVector(weights, intercept/count.toDouble)
+            val effectiveLearningRate = learningRateMethod.calculateLearningRate(stepSize, i, regParam)
 
-          val newWeights = currModel.weights
-          // add the gradient of the L2 regularization
-          BLAS.axpy(regularizationConstant, newWeights, gradient.weights)
+            val oldWeights = currModel.weights.copy
+            val newWeights = currModel.weights
+            // add the gradient of the L2 regularization
+            BLAS.axpy(regParam, newWeights, gradient.weights)
 
-          // update the weights according to the learning rate
-          BLAS.axpy(-effectiveLearningRate, gradient.weights, newWeights)
+            // update the weights according to the learning rate
+            BLAS.axpy(-effectiveLearningRate, gradient.weights, newWeights)
+            import Breeze._
+            val n2 = norm(newWeights.asBreeze, 2.0)
 
-          currModel = WeightVector(
-            newWeights,
-            currModel.intercept - effectiveLearningRate * gradient.intercept)
+            regParam = 0.5 * regParam * n2 * n2
+            currModel = WeightVector(newWeights, currModel.intercept - effectiveLearningRate * gradient.intercept)
+
+
+            val diff = norm(oldWeights.asBreeze - newWeights.asBreeze)
+            converged = diff < tol * Math.max(norm(newWeights.asBreeze), 1.0)
+            println(wcnt, count, i, diff, loss / count + regParam)
+          }
+
           i += 1
         }
 
         out.collect(currModel)
-
+        wcnt += 1
       }
 
-    }).map(x => {
-      println(x)
     })
 
   }
 
+  def predict(model: DataStream[WeightVector], testingSet: DataStream[LabeledVector]): Unit = {
+    val handle = testingSet.executionEnvironment.newBroadcastedSideInput(model)
+    testingSet.map(new RichMapFunction[LabeledVector, (Double, Double)] {
 
+      override def map(point: LabeledVector): (Double, Double) = {
+        import Breeze._
+        val WeightVector(weights, weight0) = getRuntimeContext.getSideInput(handle).asScala.last
+        val dotProduct = point.vector.asBreeze.dot(weights.asBreeze) + weight0
+        (point.label, dotProduct)
+      }
+
+    }).withSideInput(handle).print()
+  }
 
 }

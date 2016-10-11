@@ -7,13 +7,22 @@ import org.apache.flink.ml.math.DenseVector
 import org.apache.flink.ml.streaming.StreamingLinearRegressionSGD
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks
-import org.apache.flink.streaming.api.functions.source.SourceFunction
-import org.apache.flink.streaming.api.functions.source.SourceFunction.SourceContext
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.watermark.Watermark
 import org.apache.flink.streaming.api.windowing.time.Time
 
 object StreamingMachineLearning {
+
+  def parseLine(line: String): LabeledVector = {
+    val splits = line.split(" ").map(x => x.toDouble)
+//    val itm = 1
+//    val label = splits(itm)
+//    val data = splits.patch(itm, Nil, 1)
+    val label = splits(0)
+    val data = splits(6)
+    LabeledVector(label, DenseVector(data))
+  }
+
 
   def main(args: Array[String]): Unit = {
 
@@ -21,22 +30,14 @@ object StreamingMachineLearning {
     FlinkMLTools.registerFlinkMLTypes(env)
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
-    val batchDataSet = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/dataset")
-      .map(line => {
-        val splits = line.split(" ").map(x => x.toDouble)
-        val label = splits(1)
-        val data = splits.drop(1)
-        LabeledVector(label, DenseVector(data))
-      })
+    val batchDataSet = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/batch.dataset")
+      .map(line => parseLine(line))
 
-    val regressor = new StreamingLinearRegressionSGD().withInitWeights(DenseVector.zeros(8), 0)
+    val regressor = new StreamingLinearRegressionSGD().withInitWeights(DenseVector.zeros(1), 0)
 
-    val streamingTrainingSet = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/dataset")
+    val streamingTrainingSet = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/stream.dataset")
       .map(line => {
-        val splits = line.split(" ").map(x => x.toDouble)
-        val label = splits(1)
-        val data = splits.drop(1)
-        LabeledVector(label, DenseVector(data))
+        parseLine(line)
       }).assignTimestampsAndWatermarks(new AssignerWithPeriodicWatermarks[LabeledVector] {
 
       var counter = 0L
@@ -47,9 +48,14 @@ object StreamingMachineLearning {
         counter += 10L
         counter
       }
-    }).keyBy("label").timeWindow(Time.of(5000, TimeUnit.MILLISECONDS))
+    }).timeWindowAll(Time.of(50, TimeUnit.MILLISECONDS))
 
-    regressor.fit(streamingTrainingSet, env.newForwardedSideInput(batchDataSet))
+    val streamingTestingSet = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/validation.dataset").map(x=>{
+      parseLine(x)
+    })
+
+    val model = regressor.fit(streamingTrainingSet, env.newBroadcastedSideInput(batchDataSet))
+    regressor.predict(model, streamingTestingSet)
 
     env.execute()
 
