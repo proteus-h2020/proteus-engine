@@ -274,6 +274,8 @@ public class AggregatingAlignedProcessingTimeWindowOperatorTest {
 			List<Tuple2<Integer, Integer>> result = out.getElements();
 			assertEquals(numElements, result.size());
 
+			timerService.quiesceAndAwaitPending();
+
 			synchronized (lock) {
 				op.close();
 			}
@@ -349,6 +351,8 @@ public class AggregatingAlignedProcessingTimeWindowOperatorTest {
 
 			List<Tuple2<Integer, Integer>> result = out.getElements();
 
+			timerService.quiesceAndAwaitPending();
+
 			synchronized (lock) {
 				op.close();
 			}
@@ -410,6 +414,8 @@ public class AggregatingAlignedProcessingTimeWindowOperatorTest {
 				}
 				Thread.sleep(1);
 			}
+
+			timerService.quiesceAndAwaitPending();
 
 			synchronized (lock) {
 				op.close();
@@ -505,6 +511,8 @@ public class AggregatingAlignedProcessingTimeWindowOperatorTest {
 					new Tuple2<>(2, 2)
 			), result);
 
+			timerService.quiesceAndAwaitPending();
+
 			synchronized (lock) {
 				op.close();
 			}
@@ -566,6 +574,11 @@ public class AggregatingAlignedProcessingTimeWindowOperatorTest {
 			}
 			catch (Exception e) {
 				assertTrue(e.getMessage().contains("Artificial Test Exception"));
+			}
+
+			timerService.quiesceAndAwaitPending();
+			synchronized (lock) {
+				op.close();
 			}
 
 			shutdownTimerServiceAndWait(timerService);

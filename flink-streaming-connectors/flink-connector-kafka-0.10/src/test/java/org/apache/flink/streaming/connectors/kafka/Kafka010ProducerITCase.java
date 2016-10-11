@@ -1,8 +1,4 @@
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<!--
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,25 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
--->
-<configuration>
 
-  <property>
-    <name>hbase.tmp.dir</name>
-    <!-- 
-    <value>/media/Dati/hbase-0.98-data</value>
-    --> 
-    <value>/opt/hbase-0.98.6.1-hadoop2/data</value>
+package org.apache.flink.streaming.connectors.kafka;
 
-  </property>
-  <property>
-    <name>hbase.zookeeper.quorum</name>
-    <value>localhost</value>
-  </property>
-    <!-- 
-  <property>
-    <name>hadoop.security.group.mapping</name>
-    <value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value>
-  </property>
-  -->
-</configuration>
+
+import org.junit.Test;
+
+
+@SuppressWarnings("serial")
+public class Kafka010ProducerITCase extends KafkaProducerTestBase {
+
+	@Test
+	public void testCustomPartitioning() {
+		runCustomPartitioningTest();
+	}
+
+}
