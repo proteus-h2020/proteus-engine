@@ -18,8 +18,8 @@ object StreamingMachineLearning {
 //    val itm = 1
 //    val label = splits(itm)
 //    val data = splits.patch(itm, Nil, 1)
-    val label = splits(0)
-    val data = splits(6)
+    val label = splits(5)
+    val data = Array(splits(0), splits(1))
     LabeledVector(label, DenseVector(data))
   }
 
@@ -33,7 +33,7 @@ object StreamingMachineLearning {
     val batchDataSet = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/batch.dataset")
       .map(line => parseLine(line))
 
-    val regressor = new StreamingLinearRegressionSGD().withInitWeights(DenseVector.zeros(1), 0)
+    val regressor = new StreamingLinearRegressionSGD().withInitWeights(DenseVector.zeros(2), 0)
 
     val streamingTrainingSet = env.readTextFile("hdfs://vm-cluster-node1:8020/user/ventura/proteus/stream.dataset")
       .map(line => {

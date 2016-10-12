@@ -33,7 +33,7 @@ class StreamingLinearRegressionSGD (
   def fit(input: AllWindowedStream[LabeledVector, TimeWindow], historicalDataHandle: SideInput[LabeledVector]): DataStream[WeightVector] = {
     input.withSideInput(historicalDataHandle).apply(new RichAllWindowFunction[LabeledVector, WeightVector, TimeWindow] {
 
-      var currModel: WeightVector = null
+      var currModel: WeightVector = _
       var wcnt = 0
 
       override def open(parameters: Configuration): Unit = {
@@ -138,7 +138,11 @@ class StreamingLinearRegressionSGD (
         (point.label, dotProduct)
       }
 
-    }).withSideInput(handle).print()
+    }).withSideInput(handle).map(x => {
+      var (expected, real) = x
+      real = Math.abs(real)
+      println(s"expected value: $expected current value $real")
+    })
   }
 
 }
