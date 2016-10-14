@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.flink.ml.streaming
 
 import breeze.linalg.norm
@@ -30,8 +48,10 @@ class StreamingLinearRegressionSGD (
     this
   }
 
-  def fit(input: AllWindowedStream[LabeledVector, TimeWindow], historicalDataHandle: SideInput[LabeledVector]): DataStream[WeightVector] = {
-    input.withSideInput(historicalDataHandle).apply(new RichAllWindowFunction[LabeledVector, WeightVector, TimeWindow] {
+  def fit(input: AllWindowedStream[LabeledVector, TimeWindow],
+          historicalDataHandle: SideInput[LabeledVector]): DataStream[WeightVector] = {
+    input.withSideInput(historicalDataHandle)
+    .apply(new RichAllWindowFunction[LabeledVector, WeightVector, TimeWindow] {
 
       var currModel: WeightVector = _
       var wcnt = 0
@@ -55,7 +75,9 @@ class StreamingLinearRegressionSGD (
         0.5 * regularizationConstant * n * n
       }
 
-      override def apply(window: TimeWindow, input: Iterable[LabeledVector], out: Collector[WeightVector]): Unit = {
+      override def apply(window: TimeWindow,
+          input: Iterable[LabeledVector],
+          out: Collector[WeightVector]): Unit = {
 
         val lossFunction = GenericLossFunction(SquaredLoss, LinearPrediction)
         val learningRateMethod = LearningRateMethod.Default
@@ -69,7 +91,9 @@ class StreamingLinearRegressionSGD (
 
         while (!converged && i <= numEpochs) {
           val r = new XORShiftRandom(91 + i)
-          val miniBatch: Iterable[LabeledVector] = historicalData.filter(_ => r.nextDouble <= 0.15) ++ input
+          val miniBatch: Iterable[LabeledVector] = historicalData.filter(_ => {
+            r.nextDouble <= 0.15
+          }) ++ input
           val gradientCount = miniBatch.map(sample => {
             val (loss, gradient) = lossFunction.lossGradient(sample, currModel)
             (gradient, loss, 1)
@@ -84,7 +108,8 @@ class StreamingLinearRegressionSGD (
 
             // Add the right gradient to the result
             BLAS.axpy(1.0, rightGradVector.weights, result)
-            val gradients = WeightVector(result, leftGradVector.intercept + rightGradVector.intercept)
+            val gradients = WeightVector(result,
+              leftGradVector.intercept + rightGradVector.intercept)
 
             (gradients, leftLoss + rightLoss, leftCount + rightCount)
           })
@@ -95,7 +120,8 @@ class StreamingLinearRegressionSGD (
             BLAS.scal(1.0/count.toDouble, weights)
 
             val gradient = WeightVector(weights, intercept/count.toDouble)
-            val effectiveLearningRate = learningRateMethod.calculateLearningRate(stepSize, i, regParam)
+            val effectiveLearningRate = learningRateMethod.
+              calculateLearningRate(stepSize, i, regParam)
 
             val oldWeights = currModel.weights.copy
             val newWeights = currModel.weights
@@ -108,7 +134,9 @@ class StreamingLinearRegressionSGD (
             val n2 = norm(newWeights.asBreeze, 2.0)
 
             regParam = 0.5 * regParam * n2 * n2
-            currModel = WeightVector(newWeights, currModel.intercept - effectiveLearningRate * gradient.intercept)
+            currModel = WeightVector(newWeights,
+              currModel.intercept -
+                effectiveLearningRate * gradient.intercept)
 
 
             val diff = norm(oldWeights.asBreeze - newWeights.asBreeze)
@@ -133,7 +161,8 @@ class StreamingLinearRegressionSGD (
 
       override def map(point: LabeledVector): (Double, Double) = {
         import Breeze._
-        val WeightVector(weights, weight0) = getRuntimeContext.getSideInput(handle).asScala.last
+        val WeightVector(weights, weight0) = getRuntimeContext
+          .getSideInput(handle).asScala.last
         val dotProduct = point.vector.asBreeze.dot(weights.asBreeze) + weight0
         (point.label, dotProduct)
       }

@@ -92,7 +92,6 @@ import org.apache.flink.streaming.util.keys.KeySelectorUtil;
 import org.apache.flink.streaming.util.serialization.SerializationSchema;
 import org.apache.flink.util.Preconditions;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
