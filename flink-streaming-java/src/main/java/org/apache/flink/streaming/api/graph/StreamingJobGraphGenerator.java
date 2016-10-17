@@ -34,6 +34,7 @@ import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.ScheduleMode;
 import org.apache.flink.runtime.jobgraph.tasks.AbstractInvokable;
+import org.apache.flink.runtime.jobgraph.tasks.ExternalizedCheckpointSettings;
 import org.apache.flink.runtime.jobgraph.tasks.JobSnapshottingSettings;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
@@ -497,10 +498,23 @@ public class StreamingJobGraphGenerator {
 				ackVertices.add(vertex.getID());
 			}
 
+			ExternalizedCheckpointSettings externalizedCheckpointSettings;
+			if (cfg.isExternalizedCheckpointsEnabled()) {
+				CheckpointConfig.ExternalizedCheckpointCleanup cleanup = cfg.getExternalizedCheckpointCleanup();
+				// Sanity check
+				if (cleanup == null) {
+					throw new IllegalStateException("Externalized checkpoints enabled, but no cleanup mode configured.");
+				}
+				externalizedCheckpointSettings = ExternalizedCheckpointSettings.externalizeCheckpoints(cleanup.deleteOnCancellation());
+			} else {
+				externalizedCheckpointSettings = ExternalizedCheckpointSettings.none();
+			}
+
 			JobSnapshottingSettings settings = new JobSnapshottingSettings(
 					triggerVertices, ackVertices, commitVertices, interval,
 					cfg.getCheckpointTimeout(), cfg.getMinPauseBetweenCheckpoints(),
-					cfg.getMaxConcurrentCheckpoints());
+					cfg.getMaxConcurrentCheckpoints(),
+					externalizedCheckpointSettings);
 			jobGraph.setSnapshotSettings(settings);
 
 			// check if a restart strategy has been set, if not then set the FixedDelayRestartStrategy

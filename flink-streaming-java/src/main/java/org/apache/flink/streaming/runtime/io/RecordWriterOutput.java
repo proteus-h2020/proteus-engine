@@ -23,6 +23,8 @@ import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
 import org.apache.flink.streaming.api.operators.Output;
+import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
+import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.MultiplexingStreamRecordSerializer;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
@@ -48,7 +50,7 @@ public class RecordWriterOutput<OUT> implements Output<StreamRecord<OUT>> {
 	public RecordWriterOutput(
 			StreamRecordWriter<SerializationDelegate<StreamRecord<OUT>>> recordWriter,
 			TypeSerializer<OUT> outSerializer,
-			boolean enableWatermarkMultiplexing) {
+			boolean enableMultiplexing) {
 
 		checkNotNull(recordWriter);
 		
@@ -58,7 +60,7 @@ public class RecordWriterOutput<OUT> implements Output<StreamRecord<OUT>> {
 				(StreamRecordWriter<?>) recordWriter;
 
 		TypeSerializer<StreamElement> outRecordSerializer;
-		if (enableWatermarkMultiplexing) {
+		if (enableMultiplexing) {
 			outRecordSerializer = new MultiplexingStreamRecordSerializer<OUT>(outSerializer);
 		} else {
 			outRecordSerializer = (TypeSerializer<StreamElement>)
@@ -88,6 +90,18 @@ public class RecordWriterOutput<OUT> implements Output<StreamRecord<OUT>> {
 		
 		try {
 			recordWriter.broadcastEmit(serializationDelegate);
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e.getMessage(), e);
+		}
+	}
+
+	@Override
+	public void emitLatencyMarker(LatencyMarker latencyMarker) {
+		serializationDelegate.setInstance(latencyMarker);
+
+		try {
+			recordWriter.randomEmit(serializationDelegate);
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e.getMessage(), e);

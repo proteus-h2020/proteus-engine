@@ -44,7 +44,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
-public class FsSavepointStoreTest {
+public class SavepointStoreTest {
 
 	@Rule
 	public TemporaryFolder tmp = new TemporaryFolder();
@@ -54,20 +54,23 @@ public class FsSavepointStoreTest {
 	 */
 	@Test
 	public void testStoreLoadDispose() throws Exception {
-		FsSavepointStore store = new FsSavepointStore(tmp.getRoot().getPath(), "fs-savepoint-store-test-");
+		String target = tmp.getRoot().getAbsolutePath();
+
 		assertEquals(0, tmp.getRoot().listFiles().length);
 
 		// Store
 		SavepointV1 stored = new SavepointV1(1929292, SavepointV1Test.createTaskStates(4, 24));
-		String path = store.storeSavepoint(stored);
+		String path = SavepointStore.storeSavepoint(target, stored);
 		assertEquals(1, tmp.getRoot().listFiles().length);
 
 		// Load
-		Savepoint loaded = store.loadSavepoint(path);
+		Savepoint loaded = SavepointStore.loadSavepoint(path);
 		assertEquals(stored, loaded);
 
+		loaded.dispose();
+
 		// Dispose
-		store.disposeSavepoint(path);
+		SavepointStore.removeSavepoint(path);
 
 		assertEquals(0, tmp.getRoot().listFiles().length);
 	}
@@ -77,8 +80,6 @@ public class FsSavepointStoreTest {
 	 */
 	@Test
 	public void testUnexpectedSavepoint() throws Exception {
-		FsSavepointStore store = new FsSavepointStore(tmp.getRoot().getPath(), "fs-savepoint-store-test-");
-
 		// Random file
 		Path filePath = new Path(tmp.getRoot().getPath(), UUID.randomUUID().toString());
 		FSDataOutputStream fdos = FileSystem.get(filePath.toUri()).create(filePath, false);
@@ -88,7 +89,7 @@ public class FsSavepointStoreTest {
 		}
 
 		try {
-			store.loadSavepoint(filePath.toString());
+			SavepointStore.loadSavepoint(filePath.toString());
 			fail("Did not throw expected Exception");
 		} catch (RuntimeException e) {
 			assertTrue(e.getMessage().contains("Flink 1.0") && e.getMessage().contains("Unexpected magic number"));
@@ -107,7 +108,7 @@ public class FsSavepointStoreTest {
 
 		assertTrue(serializers.size() >= 1);
 
-		FsSavepointStore store = new FsSavepointStore(tmp.getRoot().getPath(), "fs-savepoint-store-test-");
+		String target = tmp.getRoot().getAbsolutePath();
 		assertEquals(0, tmp.getRoot().listFiles().length);
 
 		// New savepoint type for test
@@ -118,19 +119,19 @@ public class FsSavepointStoreTest {
 		serializers.put(version, NewSavepointSerializer.INSTANCE);
 
 		TestSavepoint newSavepoint = new TestSavepoint(version, checkpointId);
-		String pathNewSavepoint = store.storeSavepoint(newSavepoint);
+		String pathNewSavepoint = SavepointStore.storeSavepoint(target, newSavepoint);
 		assertEquals(1, tmp.getRoot().listFiles().length);
 
 		// Savepoint v0
 		Savepoint savepoint = new SavepointV1(checkpointId, SavepointV1Test.createTaskStates(4, 32));
-		String pathSavepoint = store.storeSavepoint(savepoint);
+		String pathSavepoint = SavepointStore.storeSavepoint(target, savepoint);
 		assertEquals(2, tmp.getRoot().listFiles().length);
 
 		// Load
-		Savepoint loaded = store.loadSavepoint(pathNewSavepoint);
+		Savepoint loaded = SavepointStore.loadSavepoint(pathNewSavepoint);
 		assertEquals(newSavepoint, loaded);
 
-		loaded = store.loadSavepoint(pathSavepoint);
+		loaded = SavepointStore.loadSavepoint(pathSavepoint);
 		assertEquals(savepoint, loaded);
 	}
 
@@ -143,12 +144,13 @@ public class FsSavepointStoreTest {
 		field.setAccessible(true);
 		Map<Integer, SavepointSerializer<?>> serializers = (Map<Integer, SavepointSerializer<?>>) field.get(null);
 
+		String target = tmp.getRoot().getAbsolutePath();
+
 		final int version = 123123;
 		SavepointSerializer<TestSavepoint> serializer = mock(SavepointSerializer.class);
 		doThrow(new RuntimeException("Test Exception")).when(serializer)
 				.serialize(Matchers.any(TestSavepoint.class), any(DataOutputStream.class));
 
-		FsSavepointStore store = new FsSavepointStore(tmp.getRoot().getPath(), "fs-savepoint-store-test-");
 		serializers.put(version, serializer);
 
 		Savepoint savepoint = new TestSavepoint(version, 12123123);
@@ -156,7 +158,7 @@ public class FsSavepointStoreTest {
 		assertEquals(0, tmp.getRoot().listFiles().length);
 
 		try {
-			store.storeSavepoint(savepoint);
+			SavepointStore.storeSavepoint(target, savepoint);
 		} catch (Throwable ignored) {
 		}
 
