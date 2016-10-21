@@ -48,6 +48,11 @@ class StreamingLinearRegressionSGD (
     this
   }
 
+  def withIterationNum(itNum: Int): this.type = {
+    this.numEpochs = itNum
+    this
+  }
+
   def fit(input: AllWindowedStream[LabeledVector, TimeWindow],
           historicalDataHandle: SideInput[LabeledVector]): DataStream[WeightVector] = {
     input.withSideInput(historicalDataHandle)
