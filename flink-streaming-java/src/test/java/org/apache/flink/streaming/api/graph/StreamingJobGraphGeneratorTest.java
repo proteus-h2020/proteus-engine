@@ -21,6 +21,7 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobgraph.tasks.JobSnapshottingSettings;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
@@ -33,6 +34,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 @SuppressWarnings("serial")
@@ -153,4 +155,19 @@ public class StreamingJobGraphGeneratorTest extends TestLogger {
 		assertEquals(1, jobGraph.getVerticesAsArray()[1].getParallelism());
 	}
 
+	/**
+	 * Tests that disabled checkpointing sets the checkpointing interval to Long.MAX_VALUE.
+	 */
+	@Test
+	public void testDisabledCheckpointing() throws Exception {
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		StreamGraph streamGraph = new StreamGraph(env);
+		assertFalse("Checkpointing enabled", streamGraph.getCheckpointConfig().isCheckpointingEnabled());
+
+		StreamingJobGraphGenerator jobGraphGenerator = new StreamingJobGraphGenerator(streamGraph);
+		JobGraph jobGraph = jobGraphGenerator.createJobGraph();
+
+		JobSnapshottingSettings snapshottingSettings = jobGraph.getSnapshotSettings();
+		assertEquals(Long.MAX_VALUE, snapshottingSettings.getCheckpointInterval());
+	}
 }
