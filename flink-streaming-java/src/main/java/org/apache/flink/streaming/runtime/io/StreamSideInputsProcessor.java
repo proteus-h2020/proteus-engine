@@ -38,10 +38,9 @@ import org.apache.flink.runtime.plugable.NonReusingDeserializationDelegate;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
-import org.apache.flink.streaming.runtime.streamrecord.MultiplexingStreamRecordSerializer;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
+import org.apache.flink.streaming.runtime.streamrecord.StreamElementSerializer;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.streaming.runtime.streamrecord.StreamRecordSerializer;
 import org.apache.flink.streaming.runtime.tasks.MultipleInputsStreamTask;
 
 import java.io.IOException;
@@ -112,14 +111,8 @@ public class StreamSideInputsProcessor {
 		this.deserializationDelegate = new NonReusingDeserializationDelegate[inputsSerializers.length];
 
 		for (int i = 0; i < deserializationDelegate.length; i++) {
-			TypeSerializer<?> inputSerializer = inputsSerializers[i];
-			if (enableWatermarkMultiplexing) {
-				MultiplexingStreamRecordSerializer<?> ser = new MultiplexingStreamRecordSerializer(inputSerializer);
-				this.deserializationDelegate[i] = new NonReusingDeserializationDelegate<>(ser);
-			} else {
-				StreamRecordSerializer<?> ser = new StreamRecordSerializer(inputSerializer);
-				this.deserializationDelegate[i] = (NonReusingDeserializationDelegate<StreamElement>) new NonReusingDeserializationDelegate(ser);
-			}
+			StreamElementSerializer<?> ser = new StreamElementSerializer<>(inputsSerializers[i]);
+			this.deserializationDelegate[i] = new NonReusingDeserializationDelegate<>(ser);
 		}
 
 		int channelsCount = inputGate.getNumberOfInputChannels();
@@ -172,10 +165,10 @@ public class StreamSideInputsProcessor {
 				}
 
 				if (result.isFullRecord()) {
-					StreamElement recordOrWatermark = deserializationDelegate[inputIndex].getInstance();
+					StreamElement recordOrMark = deserializationDelegate[inputIndex].getInstance();
 
-					if (recordOrWatermark.isWatermark()) {
-						long watermarkMillis = recordOrWatermark.asWatermark().getTimestamp();
+					if (recordOrMark.isWatermark()) {
+						long watermarkMillis = recordOrMark.asWatermark().getTimestamp();
 						if (watermarkMillis > watermarks[currentChannel]) {
 							watermarks[currentChannel] = watermarkMillis;
 							long newMinWatermark = Long.MAX_VALUE;
@@ -190,9 +183,15 @@ public class StreamSideInputsProcessor {
 							}
 						}
 						continue;
+					} else if(recordOrMark.isLatencyMarker()) {
+						// handle latency marker
+						synchronized (lock) {
+							wrappers[inputIndex].processLatencyMarker(recordOrMark.asLatencyMarker());
+						}
+						continue;
 					} else {
 						// now we can do the actual processing
-						StreamRecord<?> record = recordOrWatermark.asRecord();
+						StreamRecord<?> record = recordOrMark.asRecord();
 						synchronized (lock) {
 							wrappers[inputIndex].getNumberRecordsInCounter().inc();
 							wrappers[inputIndex].processElement(record);
