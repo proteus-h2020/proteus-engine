@@ -341,7 +341,9 @@ class DataStreamTest extends StreamingMultipleProgramsTestBase {
       @throws[Exception]
       def map(value: String): String = {
         val side = getRuntimeContext.getSideInput(sideInput1)
-        System.out.println("SEEING MAIN INPUT: " + value + " on " + getRuntimeContext.getTaskNameWithSubtasks + " with " + side.asInstanceOf[util.ArrayList[Integer]].get(3))
+        System.out.println("SEEING MAIN INPUT: " + value + " on " +
+          getRuntimeContext.getTaskNameWithSubtasks + " with " +
+          side.asInstanceOf[util.ArrayList[Integer]].get(3))
         value
       }
     }).withSideInput(sideInput1).withSideInput(sideInput2)
