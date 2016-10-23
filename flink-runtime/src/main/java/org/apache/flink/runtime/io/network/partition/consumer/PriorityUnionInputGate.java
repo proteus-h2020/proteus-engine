@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -161,8 +162,6 @@ public class PriorityUnionInputGate implements InputGate {
 		// Make sure to request the partitions, if they have not been requested before.
 		requestPartitions();
 
-		//final InputGate inputGate = inputGateListener.getNextInputGateToReadFrom();
-
 		final InputGate inputGate = inputGateListener.getNextInputGateToReadFrom();
 		final BufferOrEvent bufferOrEvent = inputGate.getNextBufferOrEvent();
 
@@ -235,7 +234,7 @@ public class PriorityUnionInputGate implements InputGate {
 		private final Map<InputGate, GatesPriority> priorities;
 
 		/** the total number of input gates with high priority. */
-		private int currentNumberOfHighPriorityGates;
+		private final AtomicInteger currentNumberOfHighPriorityGates;
 
 		public PriorityInputGateListener(InputGate[] inputGates,
 											PriorityUnionInputGate parent,
@@ -247,7 +246,7 @@ public class PriorityUnionInputGate implements InputGate {
 
 			this.parent = parent;
 			this.priorities = priorities;
-			this.currentNumberOfHighPriorityGates = currentNumberOfHighPriorityGates;
+			this.currentNumberOfHighPriorityGates = new AtomicInteger(currentNumberOfHighPriorityGates);
 		}
 
 		@Override
@@ -271,7 +270,7 @@ public class PriorityUnionInputGate implements InputGate {
 		}
 
 		InputGate getNextInputGateToReadFrom() throws InterruptedException {
-			if (currentNumberOfHighPriorityGates > 0) {
+			if (currentNumberOfHighPriorityGates.get() > 0) {
 				return inputGatesWithDataHigh.take();
 			}
 			return inputGatesWithDataNormal.take();
@@ -279,7 +278,7 @@ public class PriorityUnionInputGate implements InputGate {
 
 		public void notifyConsumedInputGate(InputGate consumedGate) {
 			if (priorities.get(consumedGate) == GatesPriority.HIGH) {
-				currentNumberOfHighPriorityGates--;
+				currentNumberOfHighPriorityGates.getAndDecrement();
 			}
 		}
 
