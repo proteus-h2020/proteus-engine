@@ -234,7 +234,7 @@ public class PriorityUnionInputGate implements InputGate {
 		private final Map<InputGate, GatesPriority> priorities;
 
 		/** the total number of input gates with high priority. */
-		private final AtomicInteger currentNumberOfHighPriorityGates;
+		private int currentNumberOfHighPriorityGates;
 
 		public PriorityInputGateListener(InputGate[] inputGates,
 											PriorityUnionInputGate parent,
@@ -246,7 +246,7 @@ public class PriorityUnionInputGate implements InputGate {
 
 			this.parent = parent;
 			this.priorities = priorities;
-			this.currentNumberOfHighPriorityGates = new AtomicInteger(currentNumberOfHighPriorityGates);
+			this.currentNumberOfHighPriorityGates = currentNumberOfHighPriorityGates;
 		}
 
 		@Override
@@ -270,7 +270,7 @@ public class PriorityUnionInputGate implements InputGate {
 		}
 
 		InputGate getNextInputGateToReadFrom() throws InterruptedException {
-			if (currentNumberOfHighPriorityGates.get() > 0) {
+			if (currentNumberOfHighPriorityGates > 0) {
 				return inputGatesWithDataHigh.take();
 			}
 			return inputGatesWithDataNormal.take();
@@ -278,7 +278,7 @@ public class PriorityUnionInputGate implements InputGate {
 
 		public void notifyConsumedInputGate(InputGate consumedGate) {
 			if (priorities.get(consumedGate) == GatesPriority.HIGH) {
-				currentNumberOfHighPriorityGates.getAndDecrement();
+				currentNumberOfHighPriorityGates--;
 			}
 		}
 

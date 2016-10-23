@@ -59,7 +59,7 @@ import java.io.IOException;
  *
  */
 @Internal
-public class StreamSideInputsProcessor {
+public class MultipleStreamInputsProcessor {
 
 	private final RecordDeserializer<DeserializationDelegate<StreamElement>>[] recordDeserializers;
 
@@ -84,13 +84,12 @@ public class StreamSideInputsProcessor {
 
 
 	@SuppressWarnings("unchecked")
-	public StreamSideInputsProcessor(PriorityUnionInputGate inputGate,
-								TypeSerializer<?>[] inputsSerializers,
-								int[] inputMapping,
-								StatefulTask checkpointedTask,
-								CheckpointingMode checkpointMode,
-								IOManager ioManager,
-								boolean enableWatermarkMultiplexing) throws IOException {
+	public MultipleStreamInputsProcessor(PriorityUnionInputGate inputGate,
+										 TypeSerializer<?>[] inputsSerializers,
+										 int[] inputMapping,
+										 StatefulTask checkpointedTask,
+										 CheckpointingMode checkpointMode,
+										 IOManager ioManager) throws IOException {
 
 
 		if (checkpointMode == CheckpointingMode.EXACTLY_ONCE) {
@@ -130,11 +129,11 @@ public class StreamSideInputsProcessor {
 		this.inputChannelsMapping = new int[channelsCount];
 		for (int i = 0; i < inputMapping.length; i++) {
 			int idx = inputMapping[i];
-			int l = inputGate.getNumberOfInputChannelsForGate(i);
-			for (int j = 0; j < l; j++) {
+			int currentGateChannelsCount = inputGate.getNumberOfInputChannelsForGate(i);
+			for (int j = 0; j < currentGateChannelsCount; j++) {
 				inputChannelsMapping[low + j] = idx;
 			}
-			low += l;
+			low += currentGateChannelsCount;
 		}
 
 		watermarks = new long[channelsCount];
