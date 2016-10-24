@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -160,8 +161,6 @@ public class PriorityUnionInputGate implements InputGate {
 
 		// Make sure to request the partitions, if they have not been requested before.
 		requestPartitions();
-
-		//final InputGate inputGate = inputGateListener.getNextInputGateToReadFrom();
 
 		final InputGate inputGate = inputGateListener.getNextInputGateToReadFrom();
 		final BufferOrEvent bufferOrEvent = inputGate.getNextBufferOrEvent();

@@ -31,7 +31,8 @@ import org.apache.flink.streaming.api.graph.StreamEdge;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.transformations.util.SideInputInformation;
 import org.apache.flink.streaming.api.watermark.Watermark;
-import org.apache.flink.streaming.runtime.io.StreamSideInputsProcessor;
+import org.apache.flink.streaming.runtime.io.MultipleStreamInputsProcessor;
+import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +50,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 	private static final Logger LOG = LoggerFactory.getLogger(MultipleInputsStreamTask.class);
 
-	private StreamSideInputsProcessor inputProcessor;
+	private MultipleStreamInputsProcessor inputProcessor;
 
 	private OperatorWrapper[] wrappers;
 
@@ -126,6 +127,11 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 				}
 
 				@Override
+				public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+					headOperator.processLatencyMarker(latencyMarker);
+				}
+
+				@Override
 				public Counter getNumberRecordsInCounter() {
 					return counter;
 				}
@@ -151,21 +157,22 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 					}
 
 					@Override
+					public void processLatencyMarker(LatencyMarker latencyMarker) throws Exception {
+					}
+
+					@Override
 					public Counter getNumberRecordsInCounter() {
 						return counter;
 					}
 				};
 			}
 
-
-
-			inputProcessor = new StreamSideInputsProcessor(new PriorityUnionInputGate(inputGates, prio),
+			inputProcessor = new MultipleStreamInputsProcessor(new PriorityUnionInputGate(inputGates, prio),
 				serializers,
 				realInputMapping,
 				this,
 				configuration.getCheckpointMode(),
-				getEnvironment().getIOManager(),
-				isSerializingTimestamps());
+				getEnvironment().getIOManager());
 
 			// make sure that stream tasks report their I/O statistics
 			AccumulatorRegistry registry = getEnvironment().getAccumulatorRegistry();
@@ -179,7 +186,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 	protected void run() throws Exception {
 		// cache some references on the stack, to make the code more JIT friendly
 		final OperatorWrapper[] wrapper = this.wrappers;
-		final StreamSideInputsProcessor inputProcessor = this.inputProcessor;
+		final MultipleStreamInputsProcessor inputProcessor = this.inputProcessor;
 		final Object lock = getCheckpointLock();
 
 		while (running && inputProcessor.processInput(wrapper, lock)) {
@@ -210,6 +217,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 		public abstract void processElement(StreamRecord<TYPE> record) throws Exception;
 		public abstract void processWatermark(Watermark mark) throws Exception;
+		public abstract void processLatencyMarker(LatencyMarker latencyMarker) throws Exception;
 
 		public Counter getNumberRecordsInCounter() {
 			return null;
