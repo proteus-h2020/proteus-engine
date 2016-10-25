@@ -26,6 +26,7 @@ import org.apache.flink.runtime.accumulators.AccumulatorRegistry;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.partition.consumer.InputGate;
 import org.apache.flink.runtime.io.network.partition.consumer.PriorityUnionInputGate;
+import org.apache.flink.runtime.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.graph.StreamEdge;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
@@ -113,7 +114,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 			wrappers[0] = new OperatorWrapper<IN>() {
 
-				private final Counter counter = headOperator.getMetricGroup().counter("numRecordsIn");
+				private final Counter counter = ((OperatorMetricGroup) headOperator.getMetricGroup()).getIOMetricGroup().getNumRecordsInCounter();
 
 				@Override
 				public void processElement(StreamRecord<IN> record) throws Exception {
@@ -141,11 +142,10 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 
 			for (i = 1; i < wrappers.length; i++) {
 				final UUID id = sideInfos.get(i).getId();
-				final int typeId = sideInfos.get(i).getTypeId();
 				sideInputsCollector.put(id, new ArrayList<>());
 				wrappers[i] = new OperatorWrapper() {
-
-					private final Counter counter = headOperator.getMetricGroup().counter("numRecordsIn" + typeId);
+					private final Counter counter = ((OperatorMetricGroup) headOperator.getMetricGroup()).getIOMeFA220MW
+					tricGroup().getNumRecordsInCounter();
 
 					@Override
 					public void processElement(StreamRecord record) throws Exception {

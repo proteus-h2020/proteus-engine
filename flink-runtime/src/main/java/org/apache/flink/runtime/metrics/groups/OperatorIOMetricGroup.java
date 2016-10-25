@@ -15,38 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.flink.runtime.metrics.groups;
 
 import org.apache.flink.metrics.Counter;
 
 /**
  * Metric group that contains shareable pre-defined IO-related metrics. The metrics registration is
- * forwarded to the parent task metric group.
+ * forwarded to the parent operator metric group.
  */
-public class IOMetricGroup extends ProxyMetricGroup<TaskMetricGroup> {
+public class OperatorIOMetricGroup extends ProxyMetricGroup<OperatorMetricGroup> {
 
-	private final Counter numBytesOut;
-	private final Counter numBytesInLocal;
-	private final Counter numBytesInRemote;
+	private final Counter numRecordsIn;
+	private final Counter numRecordsOut;
 
-	public IOMetricGroup(TaskMetricGroup parent) {
-		super(parent);
-
-		this.numBytesOut = counter("numBytesOut");
-		this.numBytesInLocal = counter("numBytesInLocal");
-		this.numBytesInRemote = counter("numBytesInRemote");
+	public OperatorIOMetricGroup(OperatorMetricGroup parentMetricGroup) {
+		super(parentMetricGroup);
+		numRecordsIn = parentMetricGroup.counter("numRecordsIn");
+		numRecordsOut = parentMetricGroup.counter("numRecordsOut");
 	}
 
-	public Counter getBytesOutCounter() {
-		return numBytesOut;
+	public Counter getNumRecordsInCounter() {
+		return numRecordsIn;
 	}
 
-	public Counter getNumBytesInLocalCounter() {
-		return numBytesInLocal;
-	}
-
-	public Counter getNumBytesInRemoteCounter() {
-		return numBytesInRemote;
+	public Counter getNumRecordsOutCounter() {
+		return numRecordsOut;
 	}
 }

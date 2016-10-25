@@ -32,7 +32,7 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.io.network.partition.consumer.PriorityUnionInputGate;
 import org.apache.flink.runtime.jobgraph.tasks.StatefulTask;
-import org.apache.flink.runtime.metrics.groups.IOMetricGroup;
+import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
 import org.apache.flink.runtime.plugable.DeserializationDelegate;
 import org.apache.flink.runtime.plugable.NonReusingDeserializationDelegate;
 import org.apache.flink.streaming.api.CheckpointingMode;
@@ -149,9 +149,6 @@ public class MultipleStreamInputsProcessor {
 		if (isFinished) {
 			return false;
 		}
-		//if (numRecordsIn == null) {
-		//	numRecordsIn = wrappers[0].getNumberRecordsInCounter();
-		//}
 
 		while (true) {
 			if (currentRecordDeserializer != null) {
@@ -236,7 +233,7 @@ public class MultipleStreamInputsProcessor {
 	 *
 	 * @param metrics metric group
 	 */
-	public void setMetricGroup(IOMetricGroup metrics) {
+	public void setMetricGroup(TaskIOMetricGroup metrics) {
 		metrics.gauge("currentLowWatermark", new Gauge<Long>() {
 			@Override
 			public Long getValue() {
