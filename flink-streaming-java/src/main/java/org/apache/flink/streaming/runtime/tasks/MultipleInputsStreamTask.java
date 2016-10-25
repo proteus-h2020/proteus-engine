@@ -144,8 +144,7 @@ public class MultipleInputsStreamTask<IN, OUT> extends StreamTask<OUT, OneInputS
 				final UUID id = sideInfos.get(i).getId();
 				sideInputsCollector.put(id, new ArrayList<>());
 				wrappers[i] = new OperatorWrapper() {
-					private final Counter counter = ((OperatorMetricGroup) headOperator.getMetricGroup()).getIOMeFA220MW
-					tricGroup().getNumRecordsInCounter();
+					private final Counter counter = ((OperatorMetricGroup) headOperator.getMetricGroup()).getIOMetricGroup().getNumRecordsInCounter();
 
 					@Override
 					public void processElement(StreamRecord record) throws Exception {
