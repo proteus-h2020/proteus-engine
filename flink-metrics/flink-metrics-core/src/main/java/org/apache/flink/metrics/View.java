@@ -15,27 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.flink.api.table.validate
+package org.apache.flink.metrics;
 
 /**
-  * Represents the result of `Expression.validateInput`.
-  */
-sealed trait ExprValidationResult {
-  def isFailure: Boolean = !isSuccess
-  def isSuccess: Boolean
-}
+ * An interface for metrics which should be updated in regular intervals by a background thread.
+ */
+public interface View {
+	/** The interval in which metrics are updated */
+	int UPDATE_INTERVAL_SECONDS = 5;
 
-/**
-  * Represents the successful result of `Expression.checkInputDataTypes`.
-  */
-object ValidationSuccess extends ExprValidationResult {
-  val isSuccess: Boolean = true
-}
-
-/**
-  * Represents the failing result of `Expression.checkInputDataTypes`,
-  * with a error message to show the reason of failure.
-  */
-case class ValidationFailure(message: String) extends ExprValidationResult {
-  val isSuccess: Boolean = false
+	/**
+	 * This method will be called regularly to update the metric.
+	 */
+	void update();
 }

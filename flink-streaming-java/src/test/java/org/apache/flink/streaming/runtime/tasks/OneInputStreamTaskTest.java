@@ -574,8 +574,6 @@ public class OneInputStreamTaskTest extends TestLogger {
 
 		@Override
 		public void snapshotState(FSDataOutputStream out, long checkpointId, long timestamp) throws Exception {
-			super.snapshotState(out, checkpointId, timestamp);
-
 			if (random == null) {
 				random = new Random(seed);
 			}
@@ -589,8 +587,6 @@ public class OneInputStreamTaskTest extends TestLogger {
 
 		@Override
 		public void restoreState(FSDataInputStream in) throws Exception {
-			super.restoreState(in);
-
 			numberRestoreCalls++;
 
 			if (random == null) {
