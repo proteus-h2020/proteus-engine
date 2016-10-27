@@ -85,11 +85,11 @@ public class MultipleStreamInputsProcessor {
 
 	@SuppressWarnings("unchecked")
 	public MultipleStreamInputsProcessor(PriorityUnionInputGate inputGate,
-										 TypeSerializer<?>[] inputsSerializers,
-										 int[] inputMapping,
-										 StatefulTask checkpointedTask,
-										 CheckpointingMode checkpointMode,
-										 IOManager ioManager) throws IOException {
+		TypeSerializer<?>[] inputsSerializers,
+		int[] inputMapping,
+		StatefulTask checkpointedTask,
+		CheckpointingMode checkpointMode,
+		IOManager ioManager) throws IOException {
 
 
 		if (checkpointMode == CheckpointingMode.EXACTLY_ONCE) {
