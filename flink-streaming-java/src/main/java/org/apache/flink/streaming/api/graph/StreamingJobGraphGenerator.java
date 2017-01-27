@@ -50,6 +50,7 @@ import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.streaming.api.operators.StreamOperator;
+import org.apache.flink.streaming.api.transformations.utils.SideInputInformation;
 import org.apache.flink.streaming.runtime.partitioner.ForwardPartitioner;
 import org.apache.flink.streaming.runtime.partitioner.RescalePartitioner;
 import org.apache.flink.streaming.runtime.partitioner.StreamPartitioner;
@@ -475,6 +476,12 @@ public class StreamingJobGraphGenerator {
 
 		List<StreamEdge> allOutputs = new ArrayList<StreamEdge>(chainableOutputs);
 		allOutputs.addAll(nonChainableOutputs);
+
+		Map<Integer, SideInputInformation<?>> infos = vertex.getSideInputsTypeSerializers();
+		if (infos != null) {
+			config.setNumberOfSideInputs(infos.size());
+			config.setSideInputsTypeSerializers(infos);
+		}
 
 		vertexConfigs.put(vertexID, config);
 	}

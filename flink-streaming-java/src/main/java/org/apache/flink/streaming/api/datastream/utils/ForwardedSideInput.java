@@ -16,21 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.io.network.partition.consumer;
+package org.apache.flink.streaming.api.datastream.utils;
 
-/**
- * Listener interface implemented by consumers of {@link InputGate} instances
- * that want to be notified of availability of buffer or event instances.
- */
-public interface InputGateListener {
 
-	/**
-	 * Notification callback if the input gate moves from zero to non-zero
-	 * available input channels with data.
-	 *
-	 * @param inputGate Input Gate that became available.
-	 */
-	void notifyInputGateNonEmpty(InputGate inputGate);
+import org.apache.flink.api.common.functions.util.SideInput;
+import org.apache.flink.streaming.api.datastream.DataStream;
 
-	void onInputGateConsumed(InputGate inputGate);
+public class ForwardedSideInput<TYPE> extends SideInput<TYPE> {
+
+	private transient DataStream<TYPE> stream;
+
+	public ForwardedSideInput(DataStream<TYPE> stream) {
+		this.stream = stream;
+	}
+
+	public DataStream<TYPE> stream() {
+		return this.stream;
+	}
+
+
 }

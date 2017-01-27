@@ -14,23 +14,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package org.apache.flink.runtime.io.network.partition.consumer;
+package eu.proteus.flink.annotation;
+
+import org.apache.flink.annotation.Public;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
 
 /**
- * Listener interface implemented by consumers of {@link InputGate} instances
- * that want to be notified of availability of buffer or event instances.
+ * Interface to mark methods developed within PROTEUS EU H2020 project.
  */
-public interface InputGateListener {
-
-	/**
-	 * Notification callback if the input gate moves from zero to non-zero
-	 * available input channels with data.
-	 *
-	 * @param inputGate Input Gate that became available.
-	 */
-	void notifyInputGateNonEmpty(InputGate inputGate);
-
-	void onInputGateConsumed(InputGate inputGate);
+@Documented
+@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR })
+@Public
+public @interface Proteus {
 }

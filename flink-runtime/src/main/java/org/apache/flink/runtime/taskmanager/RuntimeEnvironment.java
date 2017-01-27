@@ -261,4 +261,9 @@ public class RuntimeEnvironment implements Environment {
 	public void failExternally(Throwable cause) {
 		this.containingTask.failExternally(cause);
 	}
+
+	@Override
+	public int getInputGatesCount() {
+		return inputGates.length;
+	}
 }

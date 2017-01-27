@@ -46,6 +46,7 @@ import org.apache.flink.metrics.MetricGroup;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
@@ -237,5 +238,11 @@ public abstract class AbstractRuntimeUDFContext implements RuntimeContext {
 	public <UK, UV> MapState<UK, UV> getMapState(MapStateDescriptor<UK, UV> stateProperties) {
 		throw new UnsupportedOperationException(
 				"This state is only accessible by functions executed on a KeyedStream");
+	}
+	
+	@Override
+	public <T> List<T> getSideInput(SideInput<T> handle) {
+		throw new UnsupportedOperationException(
+				"This side input is only accessible by functions executed on a stream");
 	}
 }

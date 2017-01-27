@@ -19,13 +19,15 @@ package org.apache.flink.streaming.runtime.streamrecord;
 
 import org.apache.flink.annotation.Internal;
 
+import java.io.Serializable;
+
 /**
  * One value in a data stream. This stores the value and an optional associated timestamp.
  *
  * @param <T> The type encapsulated with the stream record.
  */
 @Internal
-public final class StreamRecord<T> extends StreamElement {
+public final class StreamRecord<T> extends StreamElement implements Serializable {
 
 	/** The actual value held by this record. */
 	private T value;

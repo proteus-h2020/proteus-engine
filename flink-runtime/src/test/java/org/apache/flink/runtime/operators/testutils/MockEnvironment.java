@@ -324,6 +324,11 @@ public class MockEnvironment implements Environment {
 	}
 
 	@Override
+	public int getInputGatesCount() {
+		return inputs.size();
+	}
+
+	@Override
 	public JobVertexID getJobVertexId() {
 		return new JobVertexID(new byte[16]);
 	}

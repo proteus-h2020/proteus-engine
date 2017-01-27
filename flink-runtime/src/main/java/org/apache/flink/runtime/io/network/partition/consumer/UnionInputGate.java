@@ -116,6 +116,14 @@ public class UnionInputGate implements InputGate, InputGateListener {
 		return totalNumberOfInputChannels;
 	}
 
+	/**
+	 * Returns the total number of input channels for a given input gate.
+	 */
+	public int getNumberOfInputChannelsForGate(int idx) {
+		checkArgument(idx >= 0 && idx < inputGates.length, "gate id out of range");
+		return inputGates[idx].getNumberOfInputChannels();
+	}
+
 	@Override
 	public boolean isFinished() {
 		for (InputGate inputGate : inputGates) {
@@ -173,6 +181,10 @@ public class UnionInputGate implements InputGate, InputGateListener {
 				throw new IllegalStateException("Couldn't find input gate in set of remaining " +
 					"input gates.");
 			}
+			final InputGateListener listener = inputGateListener;
+			if (listener != null) {
+				listener.onInputGateConsumed(inputGate);
+			}
 		}
 
 		// Set the channel index to identify the input channel (across all unioned input gates)
@@ -215,6 +227,14 @@ public class UnionInputGate implements InputGate, InputGateListener {
 	@Override
 	public void notifyInputGateNonEmpty(InputGate inputGate) {
 		queueInputGate(checkNotNull(inputGate));
+	}
+
+	@Override
+	public void onInputGateConsumed(InputGate inputGate) {
+		final InputGateListener listener = inputGateListener;
+		if (listener != null) {
+			listener.onInputGateConsumed(inputGate);
+		}
 	}
 
 	private void queueInputGate(InputGate inputGate) {

@@ -18,6 +18,8 @@
 
 package org.apache.flink.streaming.api.transformations;
 
+
+import eu.proteus.flink.annotation.Proteus;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.operators.ResourceSpec;
@@ -28,7 +30,9 @@ import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
 import org.apache.flink.util.Preconditions;
 
+
 import java.util.Collection;
+import java.util.UUID;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -158,7 +162,7 @@ public abstract class StreamTransformation<T> {
 	 */
 	public StreamTransformation(String name, TypeInformation<T> outputType, int parallelism) {
 		this.id = getNewNodeId();
-		this.name = Preconditions.checkNotNull(name);
+		this.name = checkNotNull(name);
 		this.outputType = outputType;
 		this.parallelism = parallelism;
 		this.slotSharingGroup = null;
@@ -276,7 +280,7 @@ public abstract class StreamTransformation<T> {
 	 */
 	public void setUidHash(String uidHash) {
 
-		Preconditions.checkNotNull(uidHash);
+		checkNotNull(uidHash);
 		Preconditions.checkArgument(uidHash.matches("^[0-9A-Fa-f]{32}$"),
 				"Node hash must be a 32 character String that describes a hex code. Found: " + uidHash);
 
@@ -464,4 +468,10 @@ public abstract class StreamTransformation<T> {
 		result = 31 * result + (int) (bufferTimeout ^ (bufferTimeout >>> 32));
 		return result;
 	}
+
+	@Proteus
+	public <R> void registerSideInput(UUID id, StreamTransformation<R> transformation) {
+		throw new UnsupportedOperationException();
+	}
+
 }

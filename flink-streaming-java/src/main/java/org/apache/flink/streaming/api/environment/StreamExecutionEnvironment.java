@@ -26,6 +26,7 @@ import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.cache.DistributedCache;
 import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.functions.StoppableFunction;
+import org.apache.flink.api.common.functions.util.SideInput;
 import org.apache.flink.api.common.io.FileInputFormat;
 import org.apache.flink.api.common.io.FilePathFilter;
 import org.apache.flink.api.common.io.InputFormat;
@@ -56,6 +57,9 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
+import org.apache.flink.streaming.api.datastream.utils.BroadcastedSideInput;
+import org.apache.flink.streaming.api.datastream.utils.ForwardedSideInput;
+import org.apache.flink.streaming.api.datastream.utils.KeyedSideInput;
 import org.apache.flink.streaming.api.functions.source.ContinuousFileMonitoringFunction;
 import org.apache.flink.streaming.api.functions.source.ContinuousFileReaderOperator;
 import org.apache.flink.streaming.api.functions.source.FileMonitoringFunction;
@@ -1820,4 +1824,18 @@ public abstract class StreamExecutionEnvironment {
 	public void registerCachedFile(String filePath, String name, boolean executable) {
 		this.cacheFile.add(new Tuple2<>(name, new DistributedCache.DistributedCacheEntry(filePath, executable)));
 	}
+	
+	public <TYPE> SideInput<TYPE> newBroadcastedSideInput(DataStream<TYPE> sideInput) {
+		return new BroadcastedSideInput<>(sideInput);
+	}
+
+	@Deprecated
+	public <TYPE> SideInput<TYPE> newForwardedSideInput(DataStream<TYPE> sideInput) {
+		return new ForwardedSideInput<>(sideInput);
+	}
+
+	public <TYPE, KEY> SideInput<TYPE> newKeyedSideInput(DataStream<TYPE> sideInput, int field) {
+		return new KeyedSideInput<>(sideInput, field);
+	}
+
 }

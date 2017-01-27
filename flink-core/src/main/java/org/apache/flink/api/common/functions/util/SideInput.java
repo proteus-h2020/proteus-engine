@@ -16,21 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.io.network.partition.consumer;
 
-/**
- * Listener interface implemented by consumers of {@link InputGate} instances
- * that want to be notified of availability of buffer or event instances.
- */
-public interface InputGateListener {
+package org.apache.flink.api.common.functions.util;
 
-	/**
-	 * Notification callback if the input gate moves from zero to non-zero
-	 * available input channels with data.
-	 *
-	 * @param inputGate Input Gate that became available.
-	 */
-	void notifyInputGateNonEmpty(InputGate inputGate);
 
-	void onInputGateConsumed(InputGate inputGate);
+import java.io.Serializable;
+import java.util.UUID;
+
+public abstract class SideInput <TYPE> implements Serializable {
+
+	private UUID id = UUID.randomUUID();
+
+	public UUID id() {
+		return this.id;
+	}
+
+	@Override
+	public final boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		SideInput<?> input = (SideInput<?>) o;
+
+		return id.equals(input.id());
+
+	}
+
+	@Override
+	public final int hashCode() {
+		return this.id.hashCode();
+	}
+
 }
